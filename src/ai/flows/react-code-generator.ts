@@ -15,7 +15,7 @@ import {z} from 'genkit';
 const GenerateReactCodeInputSchema = z.object({
   projectIdea: z.string().describe('The user provided project idea.'),
   projectPlan: z.string().describe('The project plan, broken down into milestones.'),
-  flowchart: z.string().describe('The flowchart diagram as an SVG string.'),
+  // flowchart: z.string().describe('The flowchart diagram as an SVG string.'), // Removed
 });
 export type GenerateReactCodeInput = z.infer<typeof GenerateReactCodeInputSchema>;
 
@@ -42,8 +42,8 @@ const prompt = ai.definePrompt({
 
 Project Idea: {{{projectIdea}}}
 Project Plan: {{{projectPlan}}}
-Flowchart (SVG):
-{{{flowchart}}}
+{/* Flowchart (SVG): Removed
+{{{flowchart}}} */}
 
 Your task is to:
 1.  Generate multiple React component files (.tsx). These should include a main page component (e.g., \`src/app/page.tsx\`) and any necessary sub-components. Each file should be complete, runnable, and adhere to modern React best practices.

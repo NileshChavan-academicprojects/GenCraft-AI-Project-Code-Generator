@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { generateProjectPlan, type GenerateProjectPlanOutput } from "@/ai/flows/project-plan-generator";
-import { generateFlowchart } from "@/ai/flows/flowchart-generator";
+// import { generateFlowchart } from "@/ai/flows/flowchart-generator"; // Removed
 import { generateReactCode, type GenerateReactCodeOutput } from "@/ai/flows/react-code-generator";
 import { generateImage, type GenerateConceptualUiImageOutput } from "@/ai/flows/image-generator-flow";
 import {
@@ -16,20 +16,20 @@ import {
 } from "@/ai/flows/project-insights-generator";
 import { LoadingSpinner } from "./loading-spinner";
 import { SectionCard } from "./section-card";
-import { FlowchartDisplay } from "./flowchart-display";
+// import { FlowchartDisplay } from "./flowchart-display"; // Removed
 import { CodeDisplay } from "./code-display";
-import { ListChecks, GitFork, Code2, Wand2, Image as ImageIcon, Lightbulb, FileText, Palette } from "lucide-react";
+import { ListChecks, Code2, Wand2, Image as ImageIcon, Lightbulb, FileText, Palette } from "lucide-react"; // Removed GitFork
 
 export function GenCraftForm() {
   const [projectIdea, setProjectIdea] = useState("");
   const [projectPlan, setProjectPlan] = useState<GenerateProjectPlanOutput | null>(null);
-  const [flowchartSvg, setFlowchartSvg] = useState<string | null>(null);
+  // const [flowchartSvg, setFlowchartSvg] = useState<string | null>(null); // Removed
   const [reactCode, setReactCode] = useState<GenerateReactCodeOutput | null>(null);
   const [generatedImageDataUri, setGeneratedImageDataUri] = useState<GenerateConceptualUiImageOutput | null>(null);
   const [projectInsights, setProjectInsights] = useState<ProjectInsightsOutput | null>(null);
 
   const [isLoadingPlan, setIsLoadingPlan] = useState(false);
-  const [isLoadingFlowchart, setIsLoadingFlowchart] = useState(false);
+  // const [isLoadingFlowchart, setIsLoadingFlowchart] = useState(false); // Removed
   const [isLoadingCode, setIsLoadingCode] = useState(false);
   const [isLoadingImage, setIsLoadingImage] = useState(false);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
@@ -49,7 +49,7 @@ export function GenCraftForm() {
 
     // Reset all states
     setProjectPlan(null);
-    setFlowchartSvg(null);
+    // setFlowchartSvg(null); // Removed
     setReactCode(null);
     setGeneratedImageDataUri(null);
     setProjectInsights(null);
@@ -74,40 +74,40 @@ export function GenCraftForm() {
       setIsLoadingPlan(false);
     }
 
-    // Step 2: Generate Flowchart
-    setIsLoadingFlowchart(true);
-    let flowchart: string | null = null;
-    try {
-      flowchart = await generateFlowchart(projectIdea);
-      setFlowchartSvg(flowchart);
-      toast({ title: "Flowchart Generated!", variant: "default" });
-    } catch (error) {
-      console.error("Error generating flowchart:", error);
-      toast({
-        title: "Flowchart Generation Failed",
-        description: "Could not generate flowchart. Please try again.",
-        variant: "destructive",
-      });
-      setIsLoadingFlowchart(false);
-      return;
-    } finally {
-      setIsLoadingFlowchart(false);
-    }
+    // // Step 2: Generate Flowchart // Removed
+    // setIsLoadingFlowchart(true);
+    // let flowchart: string | null = null;
+    // try {
+    //   flowchart = await generateFlowchart(projectIdea);
+    //   setFlowchartSvg(flowchart);
+    //   toast({ title: "Flowchart Generated!", variant: "default" });
+    // } catch (error) {
+    //   console.error("Error generating flowchart:", error);
+    //   toast({
+    //     title: "Flowchart Generation Failed",
+    //     description: "Could not generate flowchart. Please try again.",
+    //     variant: "destructive",
+    //   });
+    //   setIsLoadingFlowchart(false);
+    //   return;
+    // } finally {
+    //   setIsLoadingFlowchart(false);
+    // }
 
-    // Step 3: Generate React Code
+    // Step 3: Generate React Code (was Step 3, now effectively Step 2 of generation)
     setIsLoadingCode(true);
     let generatedCodeOutput: GenerateReactCodeOutput | null = null;
     try {
-      if (plan && flowchart) { // Ensure plan and flowchart are available
+      if (plan) { // Ensure plan is available
         generatedCodeOutput = await generateReactCode({
           projectIdea,
           projectPlan: JSON.stringify(plan),
-          flowchart,
+          // flowchart, // Removed
         });
         setReactCode(generatedCodeOutput);
         toast({ title: "React Code & Styles Generated!", variant: "default" });
       } else {
-        throw new Error("Plan or flowchart missing for code generation.");
+        throw new Error("Plan missing for code generation.");
       }
     } catch (error) {
       console.error("Error generating React code:", error);
@@ -179,7 +179,7 @@ export function GenCraftForm() {
     }
   };
 
-  const isAnyStepLoading = isLoadingPlan || isLoadingFlowchart || isLoadingCode || isLoadingImage || isLoadingInsights;
+  const isAnyStepLoading = isLoadingPlan || isLoadingCode || isLoadingImage || isLoadingInsights; // Removed isLoadingFlowchart
 
   return (
     <div className="container mx-auto max-w-4xl py-8 px-4">
@@ -231,14 +231,8 @@ export function GenCraftForm() {
             </div>
           </SectionCard>
         )}
-        {projectPlan && isLoadingFlowchart && !flowchartSvg && (
-          <SectionCard title="Generating Flowchart..." icon={GitFork}>
-            <div className="flex justify-center p-8">
-              <LoadingSpinner size={48} />
-            </div>
-          </SectionCard>
-        )}
-        {flowchartSvg && isLoadingCode && !reactCode && (
+        {/* Removed Flowchart Loading Indicator */}
+        {projectPlan && isLoadingCode && !reactCode && ( // Adjusted condition
           <SectionCard title="Generating React Code & Styles..." icon={Code2}>
             <div className="flex justify-center p-8">
               <LoadingSpinner size={48} />
@@ -271,11 +265,12 @@ export function GenCraftForm() {
           </SectionCard>
         )}
 
-        {flowchartSvg && !isLoadingFlowchart && (
+        {/* Removed Flowchart Display Section */}
+        {/* {flowchartSvg && !isLoadingFlowchart && (
           <SectionCard title="Flowchart" icon={GitFork} contentClassName="p-0 sm:p-2 md:p-4">
              <FlowchartDisplay svgString={flowchartSvg} className="bg-white dark:bg-gray-800 shadow-inner" />
           </SectionCard>
-        )}
+        )} */}
 
         {reactCode && reactCode.files && reactCode.files.length > 0 && !isLoadingCode && (
           <SectionCard title="Generated React Files" icon={Code2} contentClassName="space-y-6">
@@ -334,5 +329,3 @@ export function GenCraftForm() {
     </div>
   );
 }
-
-    
