@@ -71,6 +71,14 @@ const generateFlowchartPrompt = ai.definePrompt({
     <line x1="300" y1="210" x2="490" y2="250" class="edge-line" marker-end="url(#arrowhead)" />
   </g>
 </svg>`,
+  config: { // Added safety settings configuration
+    safetySettings: [
+      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }, // More permissive for potentially complex code/SVG structure
+      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+    ],
+  },
 });
 
 const generateFlowchartFlow = ai.defineFlow(
