@@ -7,7 +7,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { generateProjectPlan, type GenerateProjectPlanOutput } from "@/ai/flows/project-plan-generator";
-// import { generateFlowchart } from "@/ai/flows/flowchart-generator"; // Removed
 import { generateReactCode, type GenerateReactCodeOutput } from "@/ai/flows/react-code-generator";
 import { generateImage, type GenerateConceptualUiImageOutput } from "@/ai/flows/image-generator-flow";
 import {
@@ -16,20 +15,17 @@ import {
 } from "@/ai/flows/project-insights-generator";
 import { LoadingSpinner } from "./loading-spinner";
 import { SectionCard } from "./section-card";
-// import { FlowchartDisplay } from "./flowchart-display"; // Removed
 import { CodeDisplay } from "./code-display";
-import { ListChecks, Code2, Wand2, Image as ImageIcon, Lightbulb, FileText, Palette } from "lucide-react"; // Removed GitFork
+import { ListChecks, Code2, Wand2, Image as ImageIcon, Lightbulb, FileText, Palette } from "lucide-react";
 
 export function GenCraftForm() {
   const [projectIdea, setProjectIdea] = useState("");
   const [projectPlan, setProjectPlan] = useState<GenerateProjectPlanOutput | null>(null);
-  // const [flowchartSvg, setFlowchartSvg] = useState<string | null>(null); // Removed
   const [reactCode, setReactCode] = useState<GenerateReactCodeOutput | null>(null);
   const [generatedImageDataUri, setGeneratedImageDataUri] = useState<GenerateConceptualUiImageOutput | null>(null);
   const [projectInsights, setProjectInsights] = useState<ProjectInsightsOutput | null>(null);
 
   const [isLoadingPlan, setIsLoadingPlan] = useState(false);
-  // const [isLoadingFlowchart, setIsLoadingFlowchart] = useState(false); // Removed
   const [isLoadingCode, setIsLoadingCode] = useState(false);
   const [isLoadingImage, setIsLoadingImage] = useState(false);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
@@ -49,7 +45,6 @@ export function GenCraftForm() {
 
     // Reset all states
     setProjectPlan(null);
-    // setFlowchartSvg(null); // Removed
     setReactCode(null);
     setGeneratedImageDataUri(null);
     setProjectInsights(null);
@@ -74,35 +69,14 @@ export function GenCraftForm() {
       setIsLoadingPlan(false);
     }
 
-    // // Step 2: Generate Flowchart // Removed
-    // setIsLoadingFlowchart(true);
-    // let flowchart: string | null = null;
-    // try {
-    //   flowchart = await generateFlowchart(projectIdea);
-    //   setFlowchartSvg(flowchart);
-    //   toast({ title: "Flowchart Generated!", variant: "default" });
-    // } catch (error) {
-    //   console.error("Error generating flowchart:", error);
-    //   toast({
-    //     title: "Flowchart Generation Failed",
-    //     description: "Could not generate flowchart. Please try again.",
-    //     variant: "destructive",
-    //   });
-    //   setIsLoadingFlowchart(false);
-    //   return;
-    // } finally {
-    //   setIsLoadingFlowchart(false);
-    // }
-
-    // Step 3: Generate React Code (was Step 3, now effectively Step 2 of generation)
+    // Step 2: Generate React Code
     setIsLoadingCode(true);
     let generatedCodeOutput: GenerateReactCodeOutput | null = null;
     try {
-      if (plan) { // Ensure plan is available
+      if (plan) { 
         generatedCodeOutput = await generateReactCode({
           projectIdea,
           projectPlan: JSON.stringify(plan),
-          // flowchart, // Removed
         });
         setReactCode(generatedCodeOutput);
         toast({ title: "React Code & Styles Generated!", variant: "default" });
@@ -133,10 +107,10 @@ export function GenCraftForm() {
             description: "No files were generated, skipping image and insights.",
             variant: "default",
         });
-        return; // Stop if no code was generated for downstream steps
+        return; 
     }
 
-    // Step 4: Generate Conceptual UI Image
+    // Step 3: Generate Conceptual UI Image
     setIsLoadingImage(true);
     try {
       const imageOutput = await generateImage({
@@ -155,10 +129,10 @@ export function GenCraftForm() {
       setIsLoadingImage(false);
     }
 
-    // Step 5: Generate Project Insights
+    // Step 4: Generate Project Insights
     setIsLoadingInsights(true);
     try {
-      if(plan){ // plan is needed for insights
+      if(plan){ 
         const insights = await generateProjectInsights({
             projectIdea,
             projectPlan: JSON.stringify(plan),
@@ -179,7 +153,7 @@ export function GenCraftForm() {
     }
   };
 
-  const isAnyStepLoading = isLoadingPlan || isLoadingCode || isLoadingImage || isLoadingInsights; // Removed isLoadingFlowchart
+  const isAnyStepLoading = isLoadingPlan || isLoadingCode || isLoadingImage || isLoadingInsights;
 
   return (
     <div className="container mx-auto max-w-4xl py-8 px-4">
@@ -231,8 +205,7 @@ export function GenCraftForm() {
             </div>
           </SectionCard>
         )}
-        {/* Removed Flowchart Loading Indicator */}
-        {projectPlan && isLoadingCode && !reactCode && ( // Adjusted condition
+        {projectPlan && isLoadingCode && !reactCode && ( 
           <SectionCard title="Generating React Code & Styles..." icon={Code2}>
             <div className="flex justify-center p-8">
               <LoadingSpinner size={48} />
@@ -256,7 +229,11 @@ export function GenCraftForm() {
 
         {/* Results Section */}
         {projectPlan && !isLoadingPlan && (
-          <SectionCard title="Project Plan" icon={ListChecks}>
+          <SectionCard 
+            title="Project Plan" 
+            icon={ListChecks} 
+            className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
+          >
             <ul className="space-y-3 list-disc list-inside">
               <li><strong className="font-medium">Milestone 1:</strong> {projectPlan.milestone1}</li>
               <li><strong className="font-medium">Milestone 2:</strong> {projectPlan.milestone2}</li>
@@ -265,15 +242,13 @@ export function GenCraftForm() {
           </SectionCard>
         )}
 
-        {/* Removed Flowchart Display Section */}
-        {/* {flowchartSvg && !isLoadingFlowchart && (
-          <SectionCard title="Flowchart" icon={GitFork} contentClassName="p-0 sm:p-2 md:p-4">
-             <FlowchartDisplay svgString={flowchartSvg} className="bg-white dark:bg-gray-800 shadow-inner" />
-          </SectionCard>
-        )} */}
-
         {reactCode && reactCode.files && reactCode.files.length > 0 && !isLoadingCode && (
-          <SectionCard title="Generated React Files" icon={Code2} contentClassName="space-y-6">
+          <SectionCard 
+            title="Generated React Files" 
+            icon={Code2} 
+            contentClassName="space-y-6" 
+            className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
+          >
             {reactCode.files.map((file, index) => (
               <div key={index}>
                 <h3 className="text-lg font-semibold mb-2 flex items-center">
@@ -287,13 +262,22 @@ export function GenCraftForm() {
         )}
 
         {reactCode && reactCode.globalStyles && !isLoadingCode && (
-           <SectionCard title="Suggested Global Styles" icon={Palette} contentClassName="p-0">
+           <SectionCard 
+            title="Suggested Global Styles" 
+            icon={Palette} 
+            contentClassName="p-0" 
+            className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
+           >
             <CodeDisplay code={reactCode.globalStyles} language="css" />
           </SectionCard>
         )}
 
         {generatedImageDataUri && !isLoadingImage && (
-          <SectionCard title="Suggested App Image" icon={ImageIcon}>
+          <SectionCard 
+            title="Suggested App Image" 
+            icon={ImageIcon} 
+            className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
+          >
             <div className="flex justify-center items-center p-4 bg-muted dark:bg-slate-800 rounded-md">
               <img
                 src={generatedImageDataUri}
@@ -306,7 +290,11 @@ export function GenCraftForm() {
         )}
 
         {projectInsights && !isLoadingInsights && (
-          <SectionCard title="Project Insights" icon={Lightbulb}>
+          <SectionCard 
+            title="Project Insights" 
+            icon={Lightbulb} 
+            className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
+          >
             <div className="space-y-3">
               <p><strong className="font-medium">Estimated Complexity:</strong> {projectInsights.estimatedComplexity}</p>
               <div>
