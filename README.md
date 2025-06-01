@@ -8,6 +8,10 @@ GenCraft is a Next.js web application powered by Google's Genkit AI. It allows u
 
 ![GenCraft Demo Placeholder](demo.jpeg)
 
+#
+
+![GenCraft Demo Placeholder](demo2.jpeg)
+
 
 ## Features
 
