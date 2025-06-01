@@ -18,7 +18,7 @@ import { LoadingSpinner } from "./loading-spinner";
 import { SectionCard } from "./section-card";
 import { FlowchartDisplay } from "./flowchart-display";
 import { CodeDisplay } from "./code-display";
-import { ListChecks, GitFork, Code2, Wand2, Image as ImageIcon, Lightbulb } from "lucide-react";
+import { ListChecks, GitFork, Code2, Wand2, Image as ImageIcon, Lightbulb, FileText, Palette } from "lucide-react";
 
 export function GenCraftForm() {
   const [projectIdea, setProjectIdea] = useState("");
@@ -68,14 +68,14 @@ export function GenCraftForm() {
         setIsLoadingCode(true);
         let generatedCodeOutput: GenerateReactCodeOutput | null = null;
         try {
-          const code = await generateReactCode({
+          const codeOutput = await generateReactCode({
             projectIdea,
             projectPlan: JSON.stringify(plan), 
             flowchart,
           });
-          setReactCode(code);
-          generatedCodeOutput = code; 
-          toast({ title: "React Code Generated!", variant: "default" });
+          setReactCode(codeOutput);
+          generatedCodeOutput = codeOutput; 
+          toast({ title: "React Code & Styles Generated!", variant: "default" });
         } catch (error) {
           console.error("Error generating React code:", error);
           toast({
@@ -87,17 +87,17 @@ export function GenCraftForm() {
           setIsLoadingCode(false);
         }
 
-        if (generatedCodeOutput && generatedCodeOutput.starterCode) {
+        const representativeCodeForDownstream = generatedCodeOutput?.files?.[0]?.fileContent ?? "";
+
+        if (representativeCodeForDownstream) {
             setIsLoadingImage(true);
-            let imageGeneratedSuccessfully = false;
             try {
               const imageOutput = await generateImage({ 
                 projectIdea, 
-                generatedCode: generatedCodeOutput.starterCode 
+                generatedCode: representativeCodeForDownstream
               });
               setGeneratedImageDataUri(imageOutput);
               toast({ title: "Conceptual App Image Generated!", variant: "default" });
-              imageGeneratedSuccessfully = true;
             } catch (error) {
               console.error("Error generating app image:", error);
               toast({
@@ -109,13 +109,12 @@ export function GenCraftForm() {
               setIsLoadingImage(false);
             }
 
-            // Generate insights regardless of image generation success, if code was generated
             setIsLoadingInsights(true);
             try {
               const insights = await generateProjectInsights({
                 projectIdea,
                 projectPlan: JSON.stringify(plan),
-                generatedCode: generatedCodeOutput.starterCode,
+                generatedCode: representativeCodeForDownstream,
               });
               setProjectInsights(insights);
               toast({ title: "Project Insights Generated!", variant: "default" });
@@ -225,22 +224,36 @@ export function GenCraftForm() {
              <FlowchartDisplay svgString={flowchartSvg} className="bg-white dark:bg-gray-800 shadow-inner" />
              {isLoadingCode && !reactCode && (
               <div className="mt-6 flex flex-col items-center p-4 border-t border-dashed">
-                <p className="text-sm text-muted-foreground mb-2">Generating React Code...</p>
+                <p className="text-sm text-muted-foreground mb-2">Generating React Code & Styles...</p>
                 <LoadingSpinner size={36} />
               </div>
             )}
           </SectionCard>
         )}
         
-        {reactCode && (
-          <SectionCard title="Starter React Code" icon={Code2} contentClassName="p-0">
-            <CodeDisplay code={reactCode.starterCode} />
-             {isLoadingImage && !generatedImageDataUri && (
+        {reactCode && reactCode.files && reactCode.files.length > 0 && (
+          <SectionCard title="Generated React Files" icon={Code2} contentClassName="space-y-6">
+            {reactCode.files.map((file, index) => (
+              <div key={index}>
+                <h3 className="text-lg font-semibold mb-2 flex items-center">
+                  <FileText className="mr-2 h-5 w-5 text-primary" />
+                  {file.fileName}
+                </h3>
+                <CodeDisplay code={file.fileContent} language="tsx" />
+              </div>
+            ))}
+            {isLoadingImage && !generatedImageDataUri && (
               <div className="mt-6 flex flex-col items-center p-4 border-t border-dashed">
                 <p className="text-sm text-muted-foreground mb-2">Generating Conceptual App Image...</p>
                 <LoadingSpinner size={36} />
               </div>
             )}
+          </SectionCard>
+        )}
+
+        {reactCode && reactCode.globalStyles && (
+           <SectionCard title="Suggested Global Styles" icon={Palette} contentClassName="p-0">
+            <CodeDisplay code={reactCode.globalStyles} language="css" />
           </SectionCard>
         )}
 
@@ -287,3 +300,4 @@ export function GenCraftForm() {
     </div>
   );
 }
+
