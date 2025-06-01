@@ -47,104 +47,20 @@ export function GenCraftForm() {
       return;
     }
 
+    // Reset all states
     setProjectPlan(null);
     setFlowchartSvg(null);
     setReactCode(null);
     setGeneratedImageDataUri(null);
     setProjectInsights(null);
 
+    // Step 1: Generate Project Plan
     setIsLoadingPlan(true);
+    let plan: GenerateProjectPlanOutput | null = null;
     try {
-      const plan = await generateProjectPlan({ projectIdea });
+      plan = await generateProjectPlan({ projectIdea });
       setProjectPlan(plan);
       toast({ title: "Project Plan Generated!", variant: "default" });
-
-      setIsLoadingFlowchart(true);
-      try {
-        const flowchart = await generateFlowchart(projectIdea);
-        setFlowchartSvg(flowchart);
-        toast({ title: "Flowchart Generated!", variant: "default" });
-
-        setIsLoadingCode(true);
-        let generatedCodeOutput: GenerateReactCodeOutput | null = null;
-        try {
-          const codeOutput = await generateReactCode({
-            projectIdea,
-            projectPlan: JSON.stringify(plan),
-            flowchart,
-          });
-          setReactCode(codeOutput);
-          generatedCodeOutput = codeOutput;
-          toast({ title: "React Code & Styles Generated!", variant: "default" });
-        } catch (error) {
-          console.error("Error generating React code:", error);
-          toast({
-            title: "Code Generation Failed",
-            description: "Could not generate React code. Please try again.",
-            variant: "destructive",
-          });
-        } finally {
-          setIsLoadingCode(false);
-        }
-
-        let representativeCodeForDownstream = "";
-        if (generatedCodeOutput?.files && generatedCodeOutput.files.length > 0) {
-          representativeCodeForDownstream = generatedCodeOutput.files
-            .map(file => `// --- File: ${file.fileName} ---\n${file.fileContent}`)
-            .join('\n\n// --- End File ---\n\n');
-        }
-
-
-        if (representativeCodeForDownstream) {
-            setIsLoadingImage(true);
-            try {
-              const imageOutput = await generateImage({
-                generatedCode: representativeCodeForDownstream
-              });
-              setGeneratedImageDataUri(imageOutput);
-              toast({ title: "Conceptual App Image Generated!", variant: "default" });
-            } catch (error) {
-              console.error("Error generating app image:", error);
-              toast({
-                title: "Image Generation Failed",
-                description: "Could not generate a conceptual image. Please try again.",
-                variant: "destructive",
-              });
-            } finally {
-              setIsLoadingImage(false);
-            }
-
-            setIsLoadingInsights(true);
-            try {
-              const insights = await generateProjectInsights({
-                projectIdea,
-                projectPlan: JSON.stringify(plan),
-                generatedCode: representativeCodeForDownstream,
-              });
-              setProjectInsights(insights);
-              toast({ title: "Project Insights Generated!", variant: "default" });
-            } catch (error) {
-              console.error("Error generating project insights:", error);
-              toast({
-                title: "Insights Generation Failed",
-                description: "Could not generate project insights.",
-                variant: "destructive",
-              });
-            } finally {
-              setIsLoadingInsights(false);
-            }
-        }
-
-      } catch (error) {
-        console.error("Error generating flowchart:", error);
-        toast({
-          title: "Flowchart Generation Failed",
-          description: "Could not generate flowchart. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoadingFlowchart(false);
-      }
     } catch (error) {
       console.error("Error generating project plan:", error);
       toast({
@@ -152,12 +68,118 @@ export function GenCraftForm() {
         description: "Could not generate project plan. Please try again.",
         variant: "destructive",
       });
+      setIsLoadingPlan(false);
+      return;
     } finally {
       setIsLoadingPlan(false);
     }
+
+    // Step 2: Generate Flowchart
+    setIsLoadingFlowchart(true);
+    let flowchart: string | null = null;
+    try {
+      flowchart = await generateFlowchart(projectIdea);
+      setFlowchartSvg(flowchart);
+      toast({ title: "Flowchart Generated!", variant: "default" });
+    } catch (error) {
+      console.error("Error generating flowchart:", error);
+      toast({
+        title: "Flowchart Generation Failed",
+        description: "Could not generate flowchart. Please try again.",
+        variant: "destructive",
+      });
+      setIsLoadingFlowchart(false);
+      return;
+    } finally {
+      setIsLoadingFlowchart(false);
+    }
+
+    // Step 3: Generate React Code
+    setIsLoadingCode(true);
+    let generatedCodeOutput: GenerateReactCodeOutput | null = null;
+    try {
+      if (plan && flowchart) { // Ensure plan and flowchart are available
+        generatedCodeOutput = await generateReactCode({
+          projectIdea,
+          projectPlan: JSON.stringify(plan),
+          flowchart,
+        });
+        setReactCode(generatedCodeOutput);
+        toast({ title: "React Code & Styles Generated!", variant: "default" });
+      } else {
+        throw new Error("Plan or flowchart missing for code generation.");
+      }
+    } catch (error) {
+      console.error("Error generating React code:", error);
+      toast({
+        title: "Code Generation Failed",
+        description: "Could not generate React code. Please try again.",
+        variant: "destructive",
+      });
+      setIsLoadingCode(false);
+      return;
+    } finally {
+      setIsLoadingCode(false);
+    }
+    
+    let representativeCodeForDownstream = "";
+    if (generatedCodeOutput?.files && generatedCodeOutput.files.length > 0) {
+      representativeCodeForDownstream = generatedCodeOutput.files
+        .map(file => `// --- File: ${file.fileName} ---\n${file.fileContent}`)
+        .join('\n\n// --- End File ---\n\n');
+    } else {
+        toast({
+            title: "Code Generation Note",
+            description: "No files were generated, skipping image and insights.",
+            variant: "default",
+        });
+        return; // Stop if no code was generated for downstream steps
+    }
+
+    // Step 4: Generate Conceptual UI Image
+    setIsLoadingImage(true);
+    try {
+      const imageOutput = await generateImage({
+        generatedCode: representativeCodeForDownstream
+      });
+      setGeneratedImageDataUri(imageOutput);
+      toast({ title: "Conceptual App Image Generated!", variant: "default" });
+    } catch (error) {
+      console.error("Error generating app image:", error);
+      toast({
+        title: "Image Generation Failed",
+        description: "Could not generate a conceptual image. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingImage(false);
+    }
+
+    // Step 5: Generate Project Insights
+    setIsLoadingInsights(true);
+    try {
+      if(plan){ // plan is needed for insights
+        const insights = await generateProjectInsights({
+            projectIdea,
+            projectPlan: JSON.stringify(plan),
+            generatedCode: representativeCodeForDownstream,
+        });
+        setProjectInsights(insights);
+        toast({ title: "Project Insights Generated!", variant: "default" });
+      }
+    } catch (error) {
+      console.error("Error generating project insights:", error);
+      toast({
+        title: "Insights Generation Failed",
+        description: "Could not generate project insights.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingInsights(false);
+    }
   };
 
-  const isGenerating = isLoadingPlan || isLoadingFlowchart || isLoadingCode || isLoadingImage || isLoadingInsights;
+  const isAnyStepLoading = isLoadingPlan || isLoadingFlowchart || isLoadingCode || isLoadingImage || isLoadingInsights;
 
   return (
     <div className="container mx-auto max-w-4xl py-8 px-4">
@@ -186,10 +208,10 @@ export function GenCraftForm() {
               onChange={(e) => setProjectIdea(e.target.value)}
               rows={4}
               className="border-primary focus:ring-accent"
-              disabled={isGenerating}
+              disabled={isAnyStepLoading}
             />
-            <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-headline text-lg py-6" disabled={isGenerating}>
-              {isGenerating ? (
+            <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-headline text-lg py-6" disabled={isAnyStepLoading}>
+              {isAnyStepLoading ? (
                 <LoadingSpinner className="mr-2" />
               ) : (
                 <Wand2 className="mr-2 h-5 w-5" />
@@ -201,42 +223,61 @@ export function GenCraftForm() {
       </Card>
 
       <div className="space-y-8">
-        {isLoadingPlan && !projectPlan && (
+        {/* Loading Indicators Section */}
+        {isLoadingPlan && (
           <SectionCard title="Generating Project Plan..." icon={ListChecks}>
             <div className="flex justify-center p-8">
               <LoadingSpinner size={48} />
             </div>
           </SectionCard>
         )}
-        {projectPlan && (
+        {projectPlan && isLoadingFlowchart && !flowchartSvg && (
+          <SectionCard title="Generating Flowchart..." icon={GitFork}>
+            <div className="flex justify-center p-8">
+              <LoadingSpinner size={48} />
+            </div>
+          </SectionCard>
+        )}
+        {flowchartSvg && isLoadingCode && !reactCode && (
+          <SectionCard title="Generating React Code & Styles..." icon={Code2}>
+            <div className="flex justify-center p-8">
+              <LoadingSpinner size={48} />
+            </div>
+          </SectionCard>
+        )}
+        {reactCode && isLoadingImage && !generatedImageDataUri && (
+           <SectionCard title="Generating Conceptual App Image..." icon={ImageIcon}>
+            <div className="flex justify-center p-8">
+              <LoadingSpinner size={48} />
+            </div>
+          </SectionCard>
+        )}
+        {generatedImageDataUri && isLoadingInsights && !projectInsights && (
+           <SectionCard title="Generating Project Insights..." icon={Lightbulb}>
+            <div className="flex justify-center p-8">
+              <LoadingSpinner size={48} />
+            </div>
+          </SectionCard>
+        )}
+
+        {/* Results Section */}
+        {projectPlan && !isLoadingPlan && (
           <SectionCard title="Project Plan" icon={ListChecks}>
             <ul className="space-y-3 list-disc list-inside">
               <li><strong className="font-medium">Milestone 1:</strong> {projectPlan.milestone1}</li>
               <li><strong className="font-medium">Milestone 2:</strong> {projectPlan.milestone2}</li>
               <li><strong className="font-medium">Milestone 3:</strong> {projectPlan.milestone3}</li>
             </ul>
-            {isLoadingFlowchart && !flowchartSvg && (
-              <div className="mt-6 flex flex-col items-center p-4 border-t border-dashed">
-                 <p className="text-sm text-muted-foreground mb-2">Generating Flowchart...</p>
-                <LoadingSpinner size={36} />
-              </div>
-            )}
           </SectionCard>
         )}
 
-        {flowchartSvg && (
+        {flowchartSvg && !isLoadingFlowchart && (
           <SectionCard title="Flowchart" icon={GitFork} contentClassName="p-0 sm:p-2 md:p-4">
              <FlowchartDisplay svgString={flowchartSvg} className="bg-white dark:bg-gray-800 shadow-inner" />
-             {isLoadingCode && !reactCode && (
-              <div className="mt-6 flex flex-col items-center p-4 border-t border-dashed">
-                <p className="text-sm text-muted-foreground mb-2">Generating React Code & Styles...</p>
-                <LoadingSpinner size={36} />
-              </div>
-            )}
           </SectionCard>
         )}
 
-        {reactCode && reactCode.files && reactCode.files.length > 0 && (
+        {reactCode && reactCode.files && reactCode.files.length > 0 && !isLoadingCode && (
           <SectionCard title="Generated React Files" icon={Code2} contentClassName="space-y-6">
             {reactCode.files.map((file, index) => (
               <div key={index}>
@@ -247,22 +288,16 @@ export function GenCraftForm() {
                 <CodeDisplay code={file.fileContent} language="tsx" />
               </div>
             ))}
-            {isLoadingImage && !generatedImageDataUri && (
-              <div className="mt-6 flex flex-col items-center p-4 border-t border-dashed">
-                <p className="text-sm text-muted-foreground mb-2">Generating Conceptual App Image...</p>
-                <LoadingSpinner size={36} />
-              </div>
-            )}
           </SectionCard>
         )}
 
-        {reactCode && reactCode.globalStyles && (
+        {reactCode && reactCode.globalStyles && !isLoadingCode && (
            <SectionCard title="Suggested Global Styles" icon={Palette} contentClassName="p-0">
             <CodeDisplay code={reactCode.globalStyles} language="css" />
           </SectionCard>
         )}
 
-        {generatedImageDataUri && (
+        {generatedImageDataUri && !isLoadingImage && (
           <SectionCard title="Suggested App Image" icon={ImageIcon}>
             <div className="flex justify-center items-center p-4 bg-muted dark:bg-slate-800 rounded-md">
               <img
@@ -272,16 +307,10 @@ export function GenCraftForm() {
                 data-ai-hint="UI mockup"
               />
             </div>
-            {isLoadingInsights && !projectInsights && (
-              <div className="mt-6 flex flex-col items-center p-4 border-t border-dashed">
-                <p className="text-sm text-muted-foreground mb-2">Generating Project Insights...</p>
-                <LoadingSpinner size={36} />
-              </div>
-            )}
           </SectionCard>
         )}
 
-        {projectInsights && (
+        {projectInsights && !isLoadingInsights && (
           <SectionCard title="Project Insights" icon={Lightbulb}>
             <div className="space-y-3">
               <p><strong className="font-medium">Estimated Complexity:</strong> {projectInsights.estimatedComplexity}</p>
