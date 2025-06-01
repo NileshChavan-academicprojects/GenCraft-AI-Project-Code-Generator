@@ -13,10 +13,14 @@ import {
   generateProjectInsights,
   type ProjectInsightsOutput
 } from "@/ai/flows/project-insights-generator";
+import {
+  generateStrategicAdvice,
+  type StrategicAdviceOutput
+} from "@/ai/flows/strategic-advice-generator"; // Added
 import { LoadingSpinner } from "./loading-spinner";
 import { SectionCard } from "./section-card";
 import { CodeDisplay } from "./code-display";
-import { ListChecks, Code2, Wand2, Image as ImageIcon, Lightbulb, FileText, Palette } from "lucide-react";
+import { ListChecks, Code2, Wand2, Image as ImageIcon, Lightbulb, FileText, Palette, Brain } from "lucide-react"; // Added Brain
 
 export function GenCraftForm() {
   const [projectIdea, setProjectIdea] = useState("");
@@ -24,11 +28,13 @@ export function GenCraftForm() {
   const [reactCode, setReactCode] = useState<GenerateReactCodeOutput | null>(null);
   const [generatedImageDataUri, setGeneratedImageDataUri] = useState<GenerateConceptualUiImageOutput | null>(null);
   const [projectInsights, setProjectInsights] = useState<ProjectInsightsOutput | null>(null);
+  const [strategicAdvice, setStrategicAdvice] = useState<StrategicAdviceOutput | null>(null); // Added
 
   const [isLoadingPlan, setIsLoadingPlan] = useState(false);
   const [isLoadingCode, setIsLoadingCode] = useState(false);
   const [isLoadingImage, setIsLoadingImage] = useState(false);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
+  const [isLoadingStrategicAdvice, setIsLoadingStrategicAdvice] = useState(false); // Added
 
   const { toast } = useToast();
 
@@ -48,6 +54,7 @@ export function GenCraftForm() {
     setReactCode(null);
     setGeneratedImageDataUri(null);
     setProjectInsights(null);
+    setStrategicAdvice(null); // Added
 
     // Step 1: Generate Project Plan
     setIsLoadingPlan(true);
@@ -73,7 +80,7 @@ export function GenCraftForm() {
     setIsLoadingCode(true);
     let generatedCodeOutput: GenerateReactCodeOutput | null = null;
     try {
-      if (plan) { 
+      if (plan) {
         generatedCodeOutput = await generateReactCode({
           projectIdea,
           projectPlan: JSON.stringify(plan),
@@ -95,7 +102,7 @@ export function GenCraftForm() {
     } finally {
       setIsLoadingCode(false);
     }
-    
+
     let representativeCodeForDownstream = "";
     if (generatedCodeOutput?.files && generatedCodeOutput.files.length > 0) {
       representativeCodeForDownstream = generatedCodeOutput.files
@@ -104,10 +111,10 @@ export function GenCraftForm() {
     } else {
         toast({
             title: "Code Generation Note",
-            description: "No files were generated, skipping image and insights.",
+            description: "No files were generated, skipping subsequent steps.",
             variant: "default",
         });
-        return; 
+        return;
     }
 
     // Step 3: Generate Conceptual UI Image
@@ -131,9 +138,10 @@ export function GenCraftForm() {
 
     // Step 4: Generate Project Insights
     setIsLoadingInsights(true);
+    let insights: ProjectInsightsOutput | null = null;
     try {
-      if(plan){ 
-        const insights = await generateProjectInsights({
+      if(plan){
+        insights = await generateProjectInsights({
             projectIdea,
             projectPlan: JSON.stringify(plan),
             generatedCode: representativeCodeForDownstream,
@@ -151,9 +159,33 @@ export function GenCraftForm() {
     } finally {
       setIsLoadingInsights(false);
     }
+
+    // Step 5: Generate Strategic Advice (Deep Think)
+    if (plan && insights && representativeCodeForDownstream) {
+        setIsLoadingStrategicAdvice(true);
+        try {
+            const advice = await generateStrategicAdvice({
+                projectIdea,
+                projectPlan: JSON.stringify(plan),
+                generatedCode: representativeCodeForDownstream,
+                projectInsights: JSON.stringify(insights),
+            });
+            setStrategicAdvice(advice);
+            toast({ title: "Strategic Advice Generated!", variant: "default" });
+        } catch (error) {
+            console.error("Error generating strategic advice:", error);
+            toast({
+                title: "Strategic Advice Generation Failed",
+                description: "Could not generate strategic advice.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsLoadingStrategicAdvice(false);
+        }
+    }
   };
 
-  const isAnyStepLoading = isLoadingPlan || isLoadingCode || isLoadingImage || isLoadingInsights;
+  const isAnyStepLoading = isLoadingPlan || isLoadingCode || isLoadingImage || isLoadingInsights || isLoadingStrategicAdvice;
 
   return (
     <div className="container mx-auto max-w-4xl py-8 px-4">
@@ -205,7 +237,7 @@ export function GenCraftForm() {
             </div>
           </SectionCard>
         )}
-        {projectPlan && isLoadingCode && !reactCode && ( 
+        {projectPlan && isLoadingCode && !reactCode && (
           <SectionCard title="Generating React Code & Styles..." icon={Code2}>
             <div className="flex justify-center p-8">
               <LoadingSpinner size={48} />
@@ -226,12 +258,19 @@ export function GenCraftForm() {
             </div>
           </SectionCard>
         )}
+        {projectInsights && isLoadingStrategicAdvice && !strategicAdvice && ( // Added
+           <SectionCard title="Deep Thinking for Strategic Advice..." icon={Brain}>
+            <div className="flex justify-center p-8">
+              <LoadingSpinner size={48} />
+            </div>
+          </SectionCard>
+        )}
 
         {/* Results Section */}
         {projectPlan && !isLoadingPlan && (
-          <SectionCard 
-            title="Project Plan" 
-            icon={ListChecks} 
+          <SectionCard
+            title="Project Plan"
+            icon={ListChecks}
             className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
           >
             <ul className="space-y-3 list-disc list-inside">
@@ -243,10 +282,10 @@ export function GenCraftForm() {
         )}
 
         {reactCode && reactCode.files && reactCode.files.length > 0 && !isLoadingCode && (
-          <SectionCard 
-            title="Generated React Files" 
-            icon={Code2} 
-            contentClassName="space-y-6" 
+          <SectionCard
+            title="Generated React Files"
+            icon={Code2}
+            contentClassName="space-y-6"
             className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
           >
             {reactCode.files.map((file, index) => (
@@ -262,10 +301,10 @@ export function GenCraftForm() {
         )}
 
         {reactCode && reactCode.globalStyles && !isLoadingCode && (
-           <SectionCard 
-            title="Suggested Global Styles" 
-            icon={Palette} 
-            contentClassName="p-0" 
+           <SectionCard
+            title="Suggested Global Styles"
+            icon={Palette}
+            contentClassName="p-0"
             className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
            >
             <CodeDisplay code={reactCode.globalStyles} language="css" />
@@ -273,9 +312,9 @@ export function GenCraftForm() {
         )}
 
         {generatedImageDataUri && !isLoadingImage && (
-          <SectionCard 
-            title="Suggested App Image" 
-            icon={ImageIcon} 
+          <SectionCard
+            title="Suggested App Image"
+            icon={ImageIcon}
             className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
           >
             <div className="flex justify-center items-center p-4 bg-muted dark:bg-slate-800 rounded-md">
@@ -290,9 +329,9 @@ export function GenCraftForm() {
         )}
 
         {projectInsights && !isLoadingInsights && (
-          <SectionCard 
-            title="Project Insights" 
-            icon={Lightbulb} 
+          <SectionCard
+            title="Project Insights"
+            icon={Lightbulb}
             className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
           >
             <div className="space-y-3">
@@ -310,6 +349,33 @@ export function GenCraftForm() {
                 )}
               </div>
               <p><strong className="font-medium">Fun Fact/Tip:</strong> {projectInsights.funFactOrTip}</p>
+            </div>
+          </SectionCard>
+        )}
+
+        {strategicAdvice && !isLoadingStrategicAdvice && ( // Added
+          <SectionCard
+            title="Deep Thoughts: Strategic Advice"
+            icon={Brain}
+            className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
+          >
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-semibold text-primary">Key Consideration:</h4>
+                <p className="text-sm text-muted-foreground">{strategicAdvice.keyConsideration}</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-primary">Next Step Suggestion:</h4>
+                <p className="text-sm text-muted-foreground">{strategicAdvice.nextStepSuggestion}</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-primary">Potential Challenge:</h4>
+                <p className="text-sm text-muted-foreground">{strategicAdvice.potentialChallenge}</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-primary">Long-Term Thought:</h4>
+                <p className="text-sm text-muted-foreground">{strategicAdvice.longTermThought}</p>
+              </div>
             </div>
           </SectionCard>
         )}
