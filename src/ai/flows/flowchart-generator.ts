@@ -28,41 +28,48 @@ const generateFlowchartPrompt = ai.definePrompt({
   output: {schema: GenerateFlowchartOutputSchema},
   prompt: `You are an expert in creating flowchart diagrams for software projects.
 
-  Based on the following project idea, generate a flowchart diagram as an SVG string that visualizes the project workflow.
+  Based on the following project idea, generate a flowchart diagram as a self-contained SVG string that visualizes the project workflow.
   Project Idea: {{{$input}}}
 
-  Ensure the SVG string is well-formed and valid.
-  The SVG should be compatible with react-flow.
-  Do not include any explanation or preamble, just output the SVG string.
-  The generated SVG should have viewbox 0 0 600 400.
-  Each node must have an id, label, x and y coordinates.
-  Each edge must have a source and target.
-  Here is an example, for reference:
-<svg viewBox="0 0 600 400">
-  <g class="react-flow__edges">
-    <path class="react-flow__edge-path" d="M 100,50 C 150,50 150,150 200,150" marker-end="url(#react-flow__arrow)" stroke="black" stroke-width="2" fill="none"></path>
-    <g class="react-flow__edge react-flow__edge-textwrapper">
-      <text style="font-size: 12px; font-family: sans-serif; fill: rgb(0, 0, 0); transform: translate(-19.2105px, -6px); pointer-events: none; user-select: none;" class="react-flow__edge-textbg"></text>
-      <text style="font-size: 12px; font-family: sans-serif; fill: rgb(0, 0, 0); transform: translate(-19.2105px, -6px); pointer-events: none; user-select: none;" class="react-flow__edge-text"></text>
-    </g>
-  </g>
-  <g class="react-flow__nodes">
-    <div class="react-flow__node react-flow__node-input" style="transform: translate(0px, 0px); z-index: 1;">
-      <div class="react-flow__node-default">
-        <div>Input</div>
-      </div>
-    </div>
-    <div class="react-flow__node react-flow__node-default" style="transform: translate(200px, 100px); z-index: 1;">
-      <div class="react-flow__node-default">
-        <div>Process</div>
-      </div>
-    </div>
-  </g>
+  The SVG should be well-formed and valid.
+  It should use standard SVG elements like <rect>, <text>, <line>, and <path>.
+  Nodes should typically be rectangles with text inside. Use appropriate font sizes and padding for readability.
+  Edges should be lines or paths, preferably with arrowheads indicating direction.
+  The SVG must include an appropriate viewBox, for example: '0 0 600 400'.
+  Ensure all text is clearly visible against node backgrounds.
+  Do not include any explanation, preamble, or any text outside the <svg>...</svg> tags. Only output the SVG string.
+
+  Here is an example of a simple, valid SVG flowchart. Adapt its principles for the project idea:
+<svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .node-rect { fill: hsl(var(--card)); stroke: hsl(var(--primary)); stroke-width: 2; rx: 5; }
+    .node-text { fill: hsl(var(--card-foreground)); font-family: sans-serif; font-size: 14px; text-anchor: middle; dominant-baseline: middle; }
+    .edge-line { stroke: hsl(var(--foreground)); stroke-width: 2; }
+  </style>
   <defs>
-    <marker id="react-flow__arrow" viewBox="-0 -5 10 10" refX="10" refY="0" orient="auto" markerWidth="7" markerHeight="7" fill="black">
-      <path d="M 0,-5 L 10,0 L 0,5"></path>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,3.5 L0,7 Z" fill="hsl(var(--foreground))" />
     </marker>
   </defs>
+  <g>
+    <!-- Node 1: Start -->
+    <rect x="50" y="50" width="120" height="60" class="node-rect" />
+    <text x="110" y="80" class="node-text">Start</text>
+
+    <!-- Node 2: Process Data -->
+    <rect x="240" y="150" width="120" height="60" class="node-rect" />
+    <text x="300" y="180" class="node-text">Process Data</text>
+
+    <!-- Node 3: End -->
+    <rect x="430" y="250" width="120" height="60" class="node-rect" />
+    <text x="490" y="280" class="node-text">End</text>
+
+    <!-- Edge 1: Start to Process Data -->
+    <line x1="110" y1="110" x2="300" y2="150" class="edge-line" marker-end="url(#arrowhead)" />
+
+    <!-- Edge 2: Process Data to End -->
+    <line x1="300" y1="210" x2="490" y2="250" class="edge-line" marker-end="url(#arrowhead)" />
+  </g>
 </svg>`,
 });
 
@@ -70,32 +77,21 @@ const generateFlowchartFlow = ai.defineFlow(
   {
     name: 'generateFlowchartFlow',
     inputSchema: GenerateFlowchartInputSchema,
-    outputSchema: GenerateFlowchartOutputSchema, // Flow must return a string
+    outputSchema: GenerateFlowchartOutputSchema,
   },
   async input => {
+    const fallbackSvgError = '<svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="hsl(var(--muted))" /><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="hsl(var(--muted-foreground))" font-family="sans-serif" font-size="16px">Flowchart Generation Error</text></svg>';
+    const fallbackSvgWarn = '<svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="hsl(var(--muted))" /><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="hsl(var(--muted-foreground))" font-family="sans-serif" font-size="16px">Flowchart Not Available</text></svg>';
     try {
       const result = await generateFlowchartPrompt(input);
-      // If generateFlowchartPrompt resolves, and its output schema is z.string(),
-      // result.output should be a string.
-      // We check for robustness, ensuring a string is returned to meet the flow's schema.
-      if (result && typeof result.output === 'string') {
-        // An empty string is a valid SVG string (though it won't render anything).
-        // The FlowchartDisplay component should handle this gracefully.
+      if (result && typeof result.output === 'string' && result.output.trim() !== '' && result.output.trim().toLowerCase().startsWith('<svg')) {
         return result.output;
       }
-      // This path would be hit if the prompt call succeeded but for some reason
-      // result.output was not a string (e.g. null/undefined), which is unexpected
-      // if the prompt's schema validation (z.string()) is strict.
-      console.warn('Flowchart prompt completed but output was not a string or was null/undefined. Returning default empty SVG.');
-      return '<svg viewBox="0 0 600 400"></svg>';
+      console.warn('Flowchart prompt completed but output was not a valid non-empty SVG string. Output:', result?.output);
+      return fallbackSvgWarn;
     } catch (error) {
-      // This catch block handles errors thrown by generateFlowchartPrompt,
-      // including schema validation errors if the LLM returns data (like null)
-      // that doesn't conform to the prompt's GenerateFlowchartOutputSchema (z.string()).
       console.error('Error during generateFlowchartPrompt execution (e.g., schema validation failure):', error);
-      // Ensure the flow always returns a string, fulfilling its own outputSchema.
-      return '<svg viewBox="0 0 600 400"></svg>';
+      return fallbackSvgError;
     }
   }
 );
-
