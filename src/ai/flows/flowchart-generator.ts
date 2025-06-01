@@ -70,19 +70,32 @@ const generateFlowchartFlow = ai.defineFlow(
   {
     name: 'generateFlowchartFlow',
     inputSchema: GenerateFlowchartInputSchema,
-    outputSchema: GenerateFlowchartOutputSchema,
+    outputSchema: GenerateFlowchartOutputSchema, // Flow must return a string
   },
   async input => {
-    const result = await generateFlowchartPrompt(input);
-    if (typeof result.output === 'string') {
-      // If the output is an empty string, it's still a valid string as per schema.
-      // The FlowchartDisplay component will handle empty strings by rendering nothing.
-      return result.output;
+    try {
+      const result = await generateFlowchartPrompt(input);
+      // If generateFlowchartPrompt resolves, and its output schema is z.string(),
+      // result.output should be a string.
+      // We check for robustness, ensuring a string is returned to meet the flow's schema.
+      if (result && typeof result.output === 'string') {
+        // An empty string is a valid SVG string (though it won't render anything).
+        // The FlowchartDisplay component should handle this gracefully.
+        return result.output;
+      }
+      // This path would be hit if the prompt call succeeded but for some reason
+      // result.output was not a string (e.g. null/undefined), which is unexpected
+      // if the prompt's schema validation (z.string()) is strict.
+      console.warn('Flowchart prompt completed but output was not a string or was null/undefined. Returning default empty SVG.');
+      return '<svg viewBox="0 0 600 400"></svg>';
+    } catch (error) {
+      // This catch block handles errors thrown by generateFlowchartPrompt,
+      // including schema validation errors if the LLM returns data (like null)
+      // that doesn't conform to the prompt's GenerateFlowchartOutputSchema (z.string()).
+      console.error('Error during generateFlowchartPrompt execution (e.g., schema validation failure):', error);
+      // Ensure the flow always returns a string, fulfilling its own outputSchema.
+      return '<svg viewBox="0 0 600 400"></svg>';
     }
-    // If output is null, undefined, or not a string, return a default empty SVG.
-    // This handles the case where the prompt output was null or otherwise invalid.
-    console.warn('Flowchart generation did not return a string. Returning default empty SVG.');
-    return '<svg viewBox="0 0 600 400"></svg>';
   }
 );
 
