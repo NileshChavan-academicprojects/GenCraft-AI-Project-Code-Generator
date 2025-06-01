@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-GenCraft is a Next.js web application powered by Google's Genkit AI. It allows users to describe a project idea, and GenCraft will intelligently generate a project plan, provide strategic development advice, scaffold starter React code (multiple files using Next.js App Router, ShadCN UI, Tailwind CSS), create a conceptual UI image based on the generated code, and offer insightful project summaries.
+GenCraft is a Next.js web application It allows users to describe a project idea, and GenCraft will intelligently generate a project plan, provide strategic development advice, scaffold starter React code (multiple files using Next.js App Router, ShadCN UI, Tailwind CSS), create a conceptual UI image based on the generated code, and offer insightful project summaries.
 
 ## Demo
 
