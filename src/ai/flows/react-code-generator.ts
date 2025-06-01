@@ -15,7 +15,7 @@ import {z} from 'genkit';
 const GenerateReactCodeInputSchema = z.object({
   projectIdea: z.string().describe('The user provided project idea.'),
   projectPlan: z.string().describe('The project plan, broken down into milestones.'),
-  // flowchart: z.string().describe('The flowchart diagram as an SVG string.'), // Removed
+  strategicAdvice: z.string().describe("JSON string of strategic advice (keyConsideration, nextStepSuggestion, etc.) to guide code generation."),
 });
 export type GenerateReactCodeInput = z.infer<typeof GenerateReactCodeInputSchema>;
 
@@ -42,8 +42,9 @@ const prompt = ai.definePrompt({
 
 Project Idea: {{{projectIdea}}}
 Project Plan: {{{projectPlan}}}
-{/* Flowchart (SVG): Removed
-{{{flowchart}}} */}
+
+Strategic Advice to Guide Development:
+{{{strategicAdvice}}}
 
 Your task is to:
 1.  Generate multiple React component files (.tsx). These should include a main page component (e.g., \`src/app/page.tsx\`) and any necessary sub-components. Each file should be complete, runnable, and adhere to modern React best practices.
@@ -52,6 +53,7 @@ Your task is to:
     *   Utilize ShadCN UI components (e.g., <Button>, <Card>) where appropriate for UI elements.
     *   Use \`lucide-react\` for icons if needed.
     *   Use \`https://placehold.co/<width>x<height>.png\` for placeholder images and include \`data-ai-hint\` attributes with 1-2 keywords.
+    *   Crucially, use the provided 'Strategic Advice' to inform the structure, initial features, and focus of the generated code. For example, the 'keyConsideration' and 'nextStepSuggestion' from the advice should heavily influence what you build first.
 2.  Generate global CSS styles or Tailwind CSS utility class recommendations suitable for the project. This should be a single string for the \`globalStyles\` field. If no specific global styles are needed beyond default Tailwind, you can provide an empty string or a comment like "/* Tailwind CSS utilities will be primarily used. */".
 3.  The output MUST be a JSON object adhering to the specified output schema. Do NOT include any explanations, comments outside the code, or markdown formatting around the JSON.
 4.  Ensure every component returns a single root JSX element.

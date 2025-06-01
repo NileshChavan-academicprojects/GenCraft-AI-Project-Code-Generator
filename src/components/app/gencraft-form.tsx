@@ -16,25 +16,26 @@ import {
 import {
   generateStrategicAdvice,
   type StrategicAdviceOutput
-} from "@/ai/flows/strategic-advice-generator"; // Added
+} from "@/ai/flows/strategic-advice-generator";
 import { LoadingSpinner } from "./loading-spinner";
 import { SectionCard } from "./section-card";
 import { CodeDisplay } from "./code-display";
-import { ListChecks, Code2, Wand2, Image as ImageIcon, Lightbulb, FileText, Palette, Brain } from "lucide-react"; // Added Brain
+import { ListChecks, Code2, Wand2, Image as ImageIcon, Lightbulb, FileText, Palette, Brain } from "lucide-react";
 
 export function GenCraftForm() {
   const [projectIdea, setProjectIdea] = useState("");
   const [projectPlan, setProjectPlan] = useState<GenerateProjectPlanOutput | null>(null);
+  const [strategicAdvice, setStrategicAdvice] = useState<StrategicAdviceOutput | null>(null);
   const [reactCode, setReactCode] = useState<GenerateReactCodeOutput | null>(null);
   const [generatedImageDataUri, setGeneratedImageDataUri] = useState<GenerateConceptualUiImageOutput | null>(null);
   const [projectInsights, setProjectInsights] = useState<ProjectInsightsOutput | null>(null);
-  const [strategicAdvice, setStrategicAdvice] = useState<StrategicAdviceOutput | null>(null); // Added
 
   const [isLoadingPlan, setIsLoadingPlan] = useState(false);
+  const [isLoadingStrategicAdvice, setIsLoadingStrategicAdvice] = useState(false);
   const [isLoadingCode, setIsLoadingCode] = useState(false);
   const [isLoadingImage, setIsLoadingImage] = useState(false);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
-  const [isLoadingStrategicAdvice, setIsLoadingStrategicAdvice] = useState(false); // Added
+
 
   const { toast } = useToast();
 
@@ -51,10 +52,10 @@ export function GenCraftForm() {
 
     // Reset all states
     setProjectPlan(null);
+    setStrategicAdvice(null);
     setReactCode(null);
     setGeneratedImageDataUri(null);
     setProjectInsights(null);
-    setStrategicAdvice(null); // Added
 
     // Step 1: Generate Project Plan
     setIsLoadingPlan(true);
@@ -76,19 +77,48 @@ export function GenCraftForm() {
       setIsLoadingPlan(false);
     }
 
-    // Step 2: Generate React Code
+    // Step 2: Generate Strategic Advice (to guide code generation)
+    setIsLoadingStrategicAdvice(true);
+    let adviceResult: StrategicAdviceOutput | null = null;
+    try {
+      if (plan) {
+        adviceResult = await generateStrategicAdvice({
+            projectIdea,
+            projectPlan: JSON.stringify(plan),
+        });
+        setStrategicAdvice(adviceResult);
+        toast({ title: "Strategic Advice Generated!", variant: "default" });
+      } else {
+         throw new Error("Plan missing for strategic advice generation.");
+      }
+    } catch (error) {
+        console.error("Error generating strategic advice:", error);
+        toast({
+            title: "Strategic Advice Generation Failed",
+            description: "Could not generate strategic advice to guide coding.",
+            variant: "destructive",
+        });
+        setIsLoadingStrategicAdvice(false);
+        return;
+    } finally {
+        setIsLoadingStrategicAdvice(false);
+    }
+
+
+    // Step 3: Generate React Code
     setIsLoadingCode(true);
     let generatedCodeOutput: GenerateReactCodeOutput | null = null;
     try {
-      if (plan) {
+      if (plan && adviceResult) {
         generatedCodeOutput = await generateReactCode({
           projectIdea,
           projectPlan: JSON.stringify(plan),
+          strategicAdvice: JSON.stringify(adviceResult),
         });
         setReactCode(generatedCodeOutput);
         toast({ title: "React Code & Styles Generated!", variant: "default" });
       } else {
-        throw new Error("Plan missing for code generation.");
+        throw new Error("Plan or strategic advice missing for code generation.");
       }
     } catch (error) {
       console.error("Error generating React code:", error);
@@ -111,17 +141,17 @@ export function GenCraftForm() {
     } else {
         toast({
             title: "Code Generation Note",
-            description: "No files were generated, skipping subsequent steps.",
+            description: "No files were generated, subsequent steps might be affected.",
             variant: "default",
         });
-        return;
+        // Allow continuing if plan and advice are present, image/insights might still be useful
     }
 
-    // Step 3: Generate Conceptual UI Image
+    // Step 4: Generate Conceptual UI Image
     setIsLoadingImage(true);
     try {
       const imageOutput = await generateImage({
-        generatedCode: representativeCodeForDownstream
+        generatedCode: representativeCodeForDownstream // Can be empty if no code generated
       });
       setGeneratedImageDataUri(imageOutput);
       toast({ title: "Conceptual App Image Generated!", variant: "default" });
@@ -136,15 +166,14 @@ export function GenCraftForm() {
       setIsLoadingImage(false);
     }
 
-    // Step 4: Generate Project Insights
+    // Step 5: Generate Project Insights
     setIsLoadingInsights(true);
-    let insights: ProjectInsightsOutput | null = null;
     try {
-      if(plan){
-        insights = await generateProjectInsights({
+      if(plan){ // Insights primarily depend on plan and idea
+        const insights = await generateProjectInsights({
             projectIdea,
             projectPlan: JSON.stringify(plan),
-            generatedCode: representativeCodeForDownstream,
+            generatedCode: representativeCodeForDownstream, // Can be empty
         });
         setProjectInsights(insights);
         toast({ title: "Project Insights Generated!", variant: "default" });
@@ -159,33 +188,9 @@ export function GenCraftForm() {
     } finally {
       setIsLoadingInsights(false);
     }
-
-    // Step 5: Generate Strategic Advice (Deep Think)
-    if (plan && insights && representativeCodeForDownstream) {
-        setIsLoadingStrategicAdvice(true);
-        try {
-            const advice = await generateStrategicAdvice({
-                projectIdea,
-                projectPlan: JSON.stringify(plan),
-                generatedCode: representativeCodeForDownstream,
-                projectInsights: JSON.stringify(insights),
-            });
-            setStrategicAdvice(advice);
-            toast({ title: "Strategic Advice Generated!", variant: "default" });
-        } catch (error) {
-            console.error("Error generating strategic advice:", error);
-            toast({
-                title: "Strategic Advice Generation Failed",
-                description: "Could not generate strategic advice.",
-                variant: "destructive",
-            });
-        } finally {
-            setIsLoadingStrategicAdvice(false);
-        }
-    }
   };
 
-  const isAnyStepLoading = isLoadingPlan || isLoadingCode || isLoadingImage || isLoadingInsights || isLoadingStrategicAdvice;
+  const isAnyStepLoading = isLoadingPlan || isLoadingStrategicAdvice || isLoadingCode || isLoadingImage || isLoadingInsights;
 
   return (
     <div className="container mx-auto max-w-4xl py-8 px-4">
@@ -237,8 +242,15 @@ export function GenCraftForm() {
             </div>
           </SectionCard>
         )}
-        {projectPlan && isLoadingCode && !reactCode && (
-          <SectionCard title="Generating React Code & Styles..." icon={Code2}>
+        {projectPlan && isLoadingStrategicAdvice && !strategicAdvice && (
+           <SectionCard title="Deep Thinking for Strategic Code Guidance..." icon={Brain}>
+            <div className="flex justify-center p-8">
+              <LoadingSpinner size={48} />
+            </div>
+          </SectionCard>
+        )}
+        {strategicAdvice && isLoadingCode && !reactCode && (
+          <SectionCard title="Generating React Code & Styles (with guidance)..." icon={Code2}>
             <div className="flex justify-center p-8">
               <LoadingSpinner size={48} />
             </div>
@@ -258,13 +270,7 @@ export function GenCraftForm() {
             </div>
           </SectionCard>
         )}
-        {projectInsights && isLoadingStrategicAdvice && !strategicAdvice && ( // Added
-           <SectionCard title="Deep Thinking for Strategic Advice..." icon={Brain}>
-            <div className="flex justify-center p-8">
-              <LoadingSpinner size={48} />
-            </div>
-          </SectionCard>
-        )}
+
 
         {/* Results Section */}
         {projectPlan && !isLoadingPlan && (
@@ -278,6 +284,33 @@ export function GenCraftForm() {
               <li><strong className="font-medium">Milestone 2:</strong> {projectPlan.milestone2}</li>
               <li><strong className="font-medium">Milestone 3:</strong> {projectPlan.milestone3}</li>
             </ul>
+          </SectionCard>
+        )}
+
+        {strategicAdvice && !isLoadingStrategicAdvice && (
+          <SectionCard
+            title="Strategic Advice (Guiding Code Generation)"
+            icon={Brain}
+            className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
+          >
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-semibold text-primary">Key Consideration for Dev:</h4>
+                <p className="text-sm text-muted-foreground">{strategicAdvice.keyConsideration}</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-primary">Suggested First Coding Step:</h4>
+                <p className="text-sm text-muted-foreground">{strategicAdvice.nextStepSuggestion}</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-primary">Potential Dev Challenge:</h4>
+                <p className="text-sm text-muted-foreground">{strategicAdvice.potentialChallenge}</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-primary">Long-Term Architectural Thought:</h4>
+                <p className="text-sm text-muted-foreground">{strategicAdvice.longTermThought}</p>
+              </div>
+            </div>
           </SectionCard>
         )}
 
@@ -352,34 +385,8 @@ export function GenCraftForm() {
             </div>
           </SectionCard>
         )}
-
-        {strategicAdvice && !isLoadingStrategicAdvice && ( // Added
-          <SectionCard
-            title="Deep Thoughts: Strategic Advice"
-            icon={Brain}
-            className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
-          >
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-semibold text-primary">Key Consideration:</h4>
-                <p className="text-sm text-muted-foreground">{strategicAdvice.keyConsideration}</p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-primary">Next Step Suggestion:</h4>
-                <p className="text-sm text-muted-foreground">{strategicAdvice.nextStepSuggestion}</p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-primary">Potential Challenge:</h4>
-                <p className="text-sm text-muted-foreground">{strategicAdvice.potentialChallenge}</p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-primary">Long-Term Thought:</h4>
-                <p className="text-sm text-muted-foreground">{strategicAdvice.longTermThought}</p>
-              </div>
-            </div>
-          </SectionCard>
-        )}
       </div>
     </div>
   );
 }
+

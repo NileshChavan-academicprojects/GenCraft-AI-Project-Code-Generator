@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview An AI agent that provides strategic advice on a generated project.
+ * @fileOverview An AI agent that provides strategic advice to guide initial project development.
  *
  * - generateStrategicAdvice - A function that handles the strategic advice generation process.
  * - StrategicAdviceInput - The input type for the generateStrategicAdvice function.
@@ -14,16 +14,15 @@ import {z} from 'genkit';
 const StrategicAdviceInputSchema = z.object({
   projectIdea: z.string().describe("The user's original project idea."),
   projectPlan: z.string().describe("The generated project plan (as a JSON string)."),
-  generatedCode: z.string().describe("A snippet or concatenation of the generated React code."),
-  projectInsights: z.string().describe("The generated project insights (as a JSON string)."),
+  // removed generatedCode and projectInsights as this flow now runs before code generation
 });
 export type StrategicAdviceInput = z.infer<typeof StrategicAdviceInputSchema>;
 
 const StrategicAdviceOutputSchema = z.object({
-  keyConsideration: z.string().describe("A key aspect or critical factor to consider for this project's success."),
-  nextStepSuggestion: z.string().describe("A logical and actionable next step to move this project forward."),
-  potentialChallenge: z.string().describe("A potential challenge, risk, or hurdle to be mindful of."),
-  longTermThought: z.string().describe("A thought on the project's long-term potential, scalability, or future evolution."),
+  keyConsideration: z.string().describe("A key aspect or critical factor to consider for this project's success, guiding initial coding."),
+  nextStepSuggestion: z.string().describe("A logical and actionable next coding step or initial feature to implement based on the plan."),
+  potentialChallenge: z.string().describe("A potential technical challenge, risk, or hurdle to be mindful of during early development."),
+  longTermThought: z.string().describe("A thought on the project's long-term potential, scalability, or future evolution, relevant for initial architectural choices."),
 });
 export type StrategicAdviceOutput = z.infer<typeof StrategicAdviceOutputSchema>;
 
@@ -35,27 +34,18 @@ const advicePrompt = ai.definePrompt({
   name: 'strategicAdvicePrompt',
   input: {schema: StrategicAdviceInputSchema},
   output: {schema: StrategicAdviceOutputSchema},
-  prompt: `You are an experienced CTO and project strategist. You are tasked with providing "deep think" strategic advice based on a project's initial idea, generated plan, code snippets, and preliminary insights.
-Review all the provided information and offer concise, high-level strategic advice.
+  prompt: `You are an experienced CTO and project strategist. Based *only* on the project's initial idea and plan, provide strategic advice that would be most helpful for guiding the *initial software development and coding phase*. This advice will be used by another AI to generate the starter code.
 
 Project Idea: {{{projectIdea}}}
 
 Project Plan (JSON):
 {{{projectPlan}}}
 
-Generated Code Snippet (first 1000 chars):
-\`\`\`
-{{{generatedCode}}}
-\`\`\`
-
-Project Insights (JSON):
-{{{projectInsights}}}
-
-Based on all the above, provide:
-1.  keyConsideration: A critical factor or key aspect for the project's success.
-2.  nextStepSuggestion: A logical next step to advance the project.
-3.  potentialChallenge: A significant potential challenge or risk.
-4.  longTermThought: A forward-looking thought on the project's long-term potential or evolution.
+Based on the above, provide:
+1.  keyConsideration: A critical factor or key aspect for the developers to focus on during the initial coding.
+2.  nextStepSuggestion: A logical first coding step, feature, or architectural pattern to implement based on the plan.
+3.  potentialChallenge: A technical challenge or implementation risk the developers should anticipate during early development.
+4.  longTermThought: A thought on how initial architectural choices might impact future scalability or maintenance, for the developers to keep in mind from the start.
 
 Output ONLY the JSON object adhering to the schema.`,
   config: {
@@ -75,35 +65,29 @@ const strategicAdviceFlow = ai.defineFlow(
     outputSchema: StrategicAdviceOutputSchema,
   },
   async (input) => {
-    const MAX_CODE_LENGTH = 1000;
-    const codeSnippet = input.generatedCode.length > MAX_CODE_LENGTH
-      ? input.generatedCode.substring(0, MAX_CODE_LENGTH) + "\n..."
-      : input.generatedCode;
-
+    // Removed generatedCode processing as it's no longer an input
     try {
-      const {output} = await advicePrompt({
-        ...input,
-        generatedCode: codeSnippet,
-      });
+      const {output} = await advicePrompt(input); // Pass input directly
 
       if (!output) {
         console.warn('Strategic advice prompt completed but output was null or undefined.');
         return {
           keyConsideration: "Strategic advice generation returned no specific consideration.",
-          nextStepSuggestion: "Review project goals and refine requirements.",
-          potentialChallenge: "Ensuring market fit and user adoption.",
-          longTermThought: "Consider potential for feature expansion and scalability.",
+          nextStepSuggestion: "Review project goals and refine requirements for coding.",
+          potentialChallenge: "Ensuring clarity of initial feature set for development.",
+          longTermThought: "Consider modular design for future expansion from the outset.",
         };
       }
       return output;
     } catch (error) {
       console.error('Error during strategicAdvicePrompt execution:', error);
       return {
-        keyConsideration: "Error generating key consideration.",
-        nextStepSuggestion: "Error generating next step suggestion.",
-        potentialChallenge: "Error generating potential challenge.",
-        longTermThought: "Error generating long term thought.",
+        keyConsideration: "Error generating key consideration for development.",
+        nextStepSuggestion: "Error generating next step suggestion for coding.",
+        potentialChallenge: "Error generating potential challenge for development.",
+        longTermThought: "Error generating long term thought for architecture.",
       };
     }
   }
 );
+
