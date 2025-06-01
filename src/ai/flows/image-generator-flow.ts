@@ -30,19 +30,19 @@ const generateConceptualUiImageFlow = ai.defineFlow(
     outputSchema: GenerateConceptualUiImageOutputSchema,
   },
   async (input) => {
-    const MAX_CODE_LENGTH = 2000; // Increased slightly as it might contain multiple files
+    const MAX_CODE_LENGTH = 8000; // Increased to allow more code context
     const codeSnippet = input.generatedCode.length > MAX_CODE_LENGTH
-      ? input.generatedCode.substring(0, MAX_CODE_LENGTH) + "\n..."
+      ? input.generatedCode.substring(0, MAX_CODE_LENGTH) + "\n// ... (code truncated for image generation prompt)"
       : input.generatedCode;
 
     const promptText = `You are a UI/UX designer. Your task is to create a conceptual visual representation of a web application's user interface based *only* on the provided React code snippet(s).
-The provided code might be a concatenation of multiple related React files.
-Generated React Code Snippet(s) (first ${MAX_CODE_LENGTH} characters):
+The provided code is a concatenation of all relevant generated React files for the application.
+Generated React Code Snippet(s) (up to ${MAX_CODE_LENGTH} characters):
 \`\`\`jsx
 ${codeSnippet}
 \`\`\`
 
-Based *solely* on the provided code snippet(s), generate a single, clean, visually appealing mockup or a conceptual, screenshot-like image of what a simple UI for this application might look like.
+Based *solely* on the entirety of the provided code snippet(s), generate a single, clean, visually appealing mockup or a conceptual, screenshot-like image of what the UI for this application might look like.
 The style should be modern, minimalist, and suitable for a web application.
 Focus on depicting the visual UI elements suggested by the code (e.g., abstract representations of buttons, forms, lists, cards if they appear in the code).
 Do NOT include any actual code text or code syntax highlighting in the image itself. Focus purely on the visual layout and user interface elements.
