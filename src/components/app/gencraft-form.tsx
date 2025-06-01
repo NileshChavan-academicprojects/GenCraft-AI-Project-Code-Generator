@@ -257,7 +257,7 @@ export function GenCraftForm() {
           </SectionCard>
         )}
         {reactCode && isLoadingImage && !generatedImageDataUri && (
-           <SectionCard title="Generating Conceptual App Image..." icon={ImageIcon}>
+           <SectionCard title="Generating App UI Image..." icon={ImageIcon}>
             <div className="flex justify-center p-8">
               <LoadingSpinner size={48} />
             </div>
@@ -346,7 +346,7 @@ export function GenCraftForm() {
 
         {generatedImageDataUri && !isLoadingImage && (
           <SectionCard
-            title="Suggested App Image"
+            title="App UI Image"
             icon={ImageIcon}
             className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
           >
