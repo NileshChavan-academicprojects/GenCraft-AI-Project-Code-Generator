@@ -10,9 +10,9 @@ import { generateProjectPlan, type GenerateProjectPlanOutput } from "@/ai/flows/
 import { generateFlowchart } from "@/ai/flows/flowchart-generator";
 import { generateReactCode, type GenerateReactCodeOutput } from "@/ai/flows/react-code-generator";
 import { generateImage, type GenerateConceptualUiImageOutput } from "@/ai/flows/image-generator-flow";
-import { 
-  generateProjectInsights, 
-  type ProjectInsightsOutput 
+import {
+  generateProjectInsights,
+  type ProjectInsightsOutput
 } from "@/ai/flows/project-insights-generator";
 import { LoadingSpinner } from "./loading-spinner";
 import { SectionCard } from "./section-card";
@@ -64,17 +64,17 @@ export function GenCraftForm() {
         const flowchart = await generateFlowchart(projectIdea);
         setFlowchartSvg(flowchart);
         toast({ title: "Flowchart Generated!", variant: "default" });
-        
+
         setIsLoadingCode(true);
         let generatedCodeOutput: GenerateReactCodeOutput | null = null;
         try {
           const codeOutput = await generateReactCode({
             projectIdea,
-            projectPlan: JSON.stringify(plan), 
+            projectPlan: JSON.stringify(plan),
             flowchart,
           });
           setReactCode(codeOutput);
-          generatedCodeOutput = codeOutput; 
+          generatedCodeOutput = codeOutput;
           toast({ title: "React Code & Styles Generated!", variant: "default" });
         } catch (error) {
           console.error("Error generating React code:", error);
@@ -87,12 +87,18 @@ export function GenCraftForm() {
           setIsLoadingCode(false);
         }
 
-        const representativeCodeForDownstream = generatedCodeOutput?.files?.[0]?.fileContent ?? "";
+        let representativeCodeForDownstream = "";
+        if (generatedCodeOutput?.files && generatedCodeOutput.files.length > 0) {
+          representativeCodeForDownstream = generatedCodeOutput.files
+            .map(file => `// --- File: ${file.fileName} ---\n${file.fileContent}`)
+            .join('\n\n// --- End File ---\n\n');
+        }
+
 
         if (representativeCodeForDownstream) {
             setIsLoadingImage(true);
             try {
-              const imageOutput = await generateImage({ 
+              const imageOutput = await generateImage({
                 generatedCode: representativeCodeForDownstream
               });
               setGeneratedImageDataUri(imageOutput);
@@ -229,7 +235,7 @@ export function GenCraftForm() {
             )}
           </SectionCard>
         )}
-        
+
         {reactCode && reactCode.files && reactCode.files.length > 0 && (
           <SectionCard title="Generated React Files" icon={Code2} contentClassName="space-y-6">
             {reactCode.files.map((file, index) => (
@@ -259,9 +265,9 @@ export function GenCraftForm() {
         {generatedImageDataUri && (
           <SectionCard title="Suggested App Image" icon={ImageIcon}>
             <div className="flex justify-center items-center p-4 bg-muted dark:bg-slate-800 rounded-md">
-              <img 
-                src={generatedImageDataUri} 
-                alt="Generated Conceptual App UI Image" 
+              <img
+                src={generatedImageDataUri}
+                alt="Generated Conceptual App UI Image"
                 className="max-w-full h-auto max-h-96 rounded-lg shadow-md object-contain"
                 data-ai-hint="UI mockup"
               />
@@ -274,7 +280,7 @@ export function GenCraftForm() {
             )}
           </SectionCard>
         )}
-        
+
         {projectInsights && (
           <SectionCard title="Project Insights" icon={Lightbulb}>
             <div className="space-y-3">
@@ -300,3 +306,4 @@ export function GenCraftForm() {
   );
 }
 
+    

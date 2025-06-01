@@ -12,7 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateConceptualUiImageInputSchema = z.object({
-  generatedCode: z.string().describe("The generated React code for the project."),
+  generatedCode: z.string().describe("The generated React code for the project, potentially from multiple files concatenated together."),
 });
 export type GenerateConceptualUiImageInput = z.infer<typeof GenerateConceptualUiImageInputSchema>;
 
@@ -30,18 +30,19 @@ const generateConceptualUiImageFlow = ai.defineFlow(
     outputSchema: GenerateConceptualUiImageOutputSchema,
   },
   async (input) => {
-    const MAX_CODE_LENGTH = 1000;
+    const MAX_CODE_LENGTH = 2000; // Increased slightly as it might contain multiple files
     const codeSnippet = input.generatedCode.length > MAX_CODE_LENGTH
       ? input.generatedCode.substring(0, MAX_CODE_LENGTH) + "\n..."
       : input.generatedCode;
 
-    const promptText = `You are a UI/UX designer. Your task is to create a conceptual visual representation of a web application's user interface based *only* on the provided React code snippet.
-Generated React Code Snippet (first ${MAX_CODE_LENGTH} characters):
+    const promptText = `You are a UI/UX designer. Your task is to create a conceptual visual representation of a web application's user interface based *only* on the provided React code snippet(s).
+The provided code might be a concatenation of multiple related React files.
+Generated React Code Snippet(s) (first ${MAX_CODE_LENGTH} characters):
 \`\`\`jsx
 ${codeSnippet}
 \`\`\`
 
-Based *solely* on the provided code snippet, generate a single, clean, visually appealing mockup or a conceptual, screenshot-like image of what a simple UI for this application might look like.
+Based *solely* on the provided code snippet(s), generate a single, clean, visually appealing mockup or a conceptual, screenshot-like image of what a simple UI for this application might look like.
 The style should be modern, minimalist, and suitable for a web application.
 Focus on depicting the visual UI elements suggested by the code (e.g., abstract representations of buttons, forms, lists, cards if they appear in the code).
 Do NOT include any actual code text or code syntax highlighting in the image itself. Focus purely on the visual layout and user interface elements.
@@ -68,3 +69,4 @@ Ensure the image is safe for all audiences.`;
   }
 );
 
+    
