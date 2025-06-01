@@ -9,24 +9,24 @@ import { useToast } from "@/hooks/use-toast";
 import { generateProjectPlan, type GenerateProjectPlanOutput } from "@/ai/flows/project-plan-generator";
 import { generateFlowchart } from "@/ai/flows/flowchart-generator";
 import { generateReactCode, type GenerateReactCodeOutput } from "@/ai/flows/react-code-generator";
-import { generateImage, type GenerateImageOutput } from "@/ai/flows/image-generator-flow"; // New import
+import { generateImage, type GenerateConceptualUiImageOutput } from "@/ai/flows/image-generator-flow"; // Updated type import
 import { LoadingSpinner } from "./loading-spinner";
 import { SectionCard } from "./section-card";
 import { FlowchartDisplay } from "./flowchart-display";
 import { CodeDisplay } from "./code-display";
-import { ListChecks, GitFork, Code2, Wand2, Image as ImageIcon } from "lucide-react"; // Added ImageIcon
+import { ListChecks, GitFork, Code2, Wand2, Image as ImageIcon } from "lucide-react";
 
 export function GenCraftForm() {
   const [projectIdea, setProjectIdea] = useState("");
   const [projectPlan, setProjectPlan] = useState<GenerateProjectPlanOutput | null>(null);
   const [flowchartSvg, setFlowchartSvg] = useState<string | null>(null);
   const [reactCode, setReactCode] = useState<GenerateReactCodeOutput | null>(null);
-  const [generatedImageDataUri, setGeneratedImageDataUri] = useState<GenerateImageOutput | null>(null); // New state
+  const [generatedImageDataUri, setGeneratedImageDataUri] = useState<GenerateConceptualUiImageOutput | null>(null); // Updated type
 
   const [isLoadingPlan, setIsLoadingPlan] = useState(false);
   const [isLoadingFlowchart, setIsLoadingFlowchart] = useState(false);
   const [isLoadingCode, setIsLoadingCode] = useState(false);
-  const [isLoadingImage, setIsLoadingImage] = useState(false); // New loading state
+  const [isLoadingImage, setIsLoadingImage] = useState(false);
 
   const { toast } = useToast();
 
@@ -41,11 +41,10 @@ export function GenCraftForm() {
       return;
     }
 
-    // Reset previous results
     setProjectPlan(null);
     setFlowchartSvg(null);
     setReactCode(null);
-    setGeneratedImageDataUri(null); // Reset image
+    setGeneratedImageDataUri(null);
 
     setIsLoadingPlan(true);
     try {
@@ -60,7 +59,7 @@ export function GenCraftForm() {
         toast({ title: "Flowchart Generated!", variant: "default" });
         
         setIsLoadingCode(true);
-        let generatedCode: GenerateReactCodeOutput | null = null;
+        let generatedCodeOutput: GenerateReactCodeOutput | null = null;
         try {
           const code = await generateReactCode({
             projectIdea,
@@ -68,7 +67,7 @@ export function GenCraftForm() {
             flowchart,
           });
           setReactCode(code);
-          generatedCode = code; // Store for image generation
+          generatedCodeOutput = code; 
           toast({ title: "React Code Generated!", variant: "default" });
         } catch (error) {
           console.error("Error generating React code:", error);
@@ -81,18 +80,21 @@ export function GenCraftForm() {
           setIsLoadingCode(false);
         }
 
-        // Generate image after code generation attempt
-        if (generatedCode) {
+        if (generatedCodeOutput && generatedCodeOutput.starterCode) {
             setIsLoadingImage(true);
             try {
-              const imageOutput = await generateImage(projectIdea);
+              // Pass projectIdea and the generated code to the image generation flow
+              const imageOutput = await generateImage({ 
+                projectIdea, 
+                generatedCode: generatedCodeOutput.starterCode 
+              });
               setGeneratedImageDataUri(imageOutput);
-              toast({ title: "App Image Generated!", variant: "default" });
+              toast({ title: "Conceptual App Image Generated!", variant: "default" });
             } catch (error) {
               console.error("Error generating app image:", error);
               toast({
                 title: "Image Generation Failed",
-                description: "Could not generate an image. Please try again.",
+                description: "Could not generate a conceptual image. Please try again.",
                 variant: "destructive",
               });
             } finally {
@@ -206,7 +208,7 @@ export function GenCraftForm() {
             <CodeDisplay code={reactCode.starterCode} />
              {isLoadingImage && !generatedImageDataUri && (
               <div className="mt-6 flex flex-col items-center p-4 border-t border-dashed">
-                <p className="text-sm text-muted-foreground mb-2">Generating App Image...</p>
+                <p className="text-sm text-muted-foreground mb-2">Generating Conceptual App Image...</p>
                 <LoadingSpinner size={36} />
               </div>
             )}
@@ -218,9 +220,9 @@ export function GenCraftForm() {
             <div className="flex justify-center items-center p-4 bg-muted dark:bg-slate-800 rounded-md">
               <img 
                 src={generatedImageDataUri} 
-                alt="Generated App Image" 
+                alt="Generated Conceptual App UI Image" 
                 className="max-w-full h-auto max-h-96 rounded-lg shadow-md object-contain"
-                data-ai-hint="application visual"
+                data-ai-hint="UI mockup"
               />
             </div>
           </SectionCard>
