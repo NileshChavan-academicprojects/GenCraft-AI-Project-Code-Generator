@@ -1,3 +1,4 @@
+
 // src/ai/flows/flowchart-generator.ts
 'use server';
 /**
@@ -72,7 +73,16 @@ const generateFlowchartFlow = ai.defineFlow(
     outputSchema: GenerateFlowchartOutputSchema,
   },
   async input => {
-    const {output} = await generateFlowchartPrompt(input);
-    return output!;
+    const result = await generateFlowchartPrompt(input);
+    if (typeof result.output === 'string') {
+      // If the output is an empty string, it's still a valid string as per schema.
+      // The FlowchartDisplay component will handle empty strings by rendering nothing.
+      return result.output;
+    }
+    // If output is null, undefined, or not a string, return a default empty SVG.
+    // This handles the case where the prompt output was null or otherwise invalid.
+    console.warn('Flowchart generation did not return a string. Returning default empty SVG.');
+    return '<svg viewBox="0 0 600 400"></svg>';
   }
 );
+
