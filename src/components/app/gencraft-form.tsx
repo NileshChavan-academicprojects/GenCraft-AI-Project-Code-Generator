@@ -9,24 +9,30 @@ import { useToast } from "@/hooks/use-toast";
 import { generateProjectPlan, type GenerateProjectPlanOutput } from "@/ai/flows/project-plan-generator";
 import { generateFlowchart } from "@/ai/flows/flowchart-generator";
 import { generateReactCode, type GenerateReactCodeOutput } from "@/ai/flows/react-code-generator";
-import { generateImage, type GenerateConceptualUiImageOutput } from "@/ai/flows/image-generator-flow"; // Updated type import
+import { generateImage, type GenerateConceptualUiImageOutput } from "@/ai/flows/image-generator-flow";
+import { 
+  generateProjectInsights, 
+  type ProjectInsightsOutput 
+} from "@/ai/flows/project-insights-generator";
 import { LoadingSpinner } from "./loading-spinner";
 import { SectionCard } from "./section-card";
 import { FlowchartDisplay } from "./flowchart-display";
 import { CodeDisplay } from "./code-display";
-import { ListChecks, GitFork, Code2, Wand2, Image as ImageIcon } from "lucide-react";
+import { ListChecks, GitFork, Code2, Wand2, Image as ImageIcon, Lightbulb } from "lucide-react";
 
 export function GenCraftForm() {
   const [projectIdea, setProjectIdea] = useState("");
   const [projectPlan, setProjectPlan] = useState<GenerateProjectPlanOutput | null>(null);
   const [flowchartSvg, setFlowchartSvg] = useState<string | null>(null);
   const [reactCode, setReactCode] = useState<GenerateReactCodeOutput | null>(null);
-  const [generatedImageDataUri, setGeneratedImageDataUri] = useState<GenerateConceptualUiImageOutput | null>(null); // Updated type
+  const [generatedImageDataUri, setGeneratedImageDataUri] = useState<GenerateConceptualUiImageOutput | null>(null);
+  const [projectInsights, setProjectInsights] = useState<ProjectInsightsOutput | null>(null);
 
   const [isLoadingPlan, setIsLoadingPlan] = useState(false);
   const [isLoadingFlowchart, setIsLoadingFlowchart] = useState(false);
   const [isLoadingCode, setIsLoadingCode] = useState(false);
   const [isLoadingImage, setIsLoadingImage] = useState(false);
+  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
 
   const { toast } = useToast();
 
@@ -45,6 +51,7 @@ export function GenCraftForm() {
     setFlowchartSvg(null);
     setReactCode(null);
     setGeneratedImageDataUri(null);
+    setProjectInsights(null);
 
     setIsLoadingPlan(true);
     try {
@@ -82,14 +89,15 @@ export function GenCraftForm() {
 
         if (generatedCodeOutput && generatedCodeOutput.starterCode) {
             setIsLoadingImage(true);
+            let imageGeneratedSuccessfully = false;
             try {
-              // Pass projectIdea and the generated code to the image generation flow
               const imageOutput = await generateImage({ 
                 projectIdea, 
                 generatedCode: generatedCodeOutput.starterCode 
               });
               setGeneratedImageDataUri(imageOutput);
               toast({ title: "Conceptual App Image Generated!", variant: "default" });
+              imageGeneratedSuccessfully = true;
             } catch (error) {
               console.error("Error generating app image:", error);
               toast({
@@ -99,6 +107,27 @@ export function GenCraftForm() {
               });
             } finally {
               setIsLoadingImage(false);
+            }
+
+            // Generate insights regardless of image generation success, if code was generated
+            setIsLoadingInsights(true);
+            try {
+              const insights = await generateProjectInsights({
+                projectIdea,
+                projectPlan: JSON.stringify(plan),
+                generatedCode: generatedCodeOutput.starterCode,
+              });
+              setProjectInsights(insights);
+              toast({ title: "Project Insights Generated!", variant: "default" });
+            } catch (error) {
+              console.error("Error generating project insights:", error);
+              toast({
+                title: "Insights Generation Failed",
+                description: "Could not generate project insights.",
+                variant: "destructive",
+              });
+            } finally {
+              setIsLoadingInsights(false);
             }
         }
 
@@ -124,7 +153,7 @@ export function GenCraftForm() {
     }
   };
 
-  const isGenerating = isLoadingPlan || isLoadingFlowchart || isLoadingCode || isLoadingImage;
+  const isGenerating = isLoadingPlan || isLoadingFlowchart || isLoadingCode || isLoadingImage || isLoadingInsights;
 
   return (
     <div className="container mx-auto max-w-4xl py-8 px-4">
@@ -224,6 +253,33 @@ export function GenCraftForm() {
                 className="max-w-full h-auto max-h-96 rounded-lg shadow-md object-contain"
                 data-ai-hint="UI mockup"
               />
+            </div>
+            {isLoadingInsights && !projectInsights && (
+              <div className="mt-6 flex flex-col items-center p-4 border-t border-dashed">
+                <p className="text-sm text-muted-foreground mb-2">Generating Project Insights...</p>
+                <LoadingSpinner size={36} />
+              </div>
+            )}
+          </SectionCard>
+        )}
+        
+        {projectInsights && (
+          <SectionCard title="Project Insights" icon={Lightbulb}>
+            <div className="space-y-3">
+              <p><strong className="font-medium">Estimated Complexity:</strong> {projectInsights.estimatedComplexity}</p>
+              <div>
+                <strong className="font-medium">Suggested Keywords:</strong>
+                {projectInsights.suggestedKeywords && projectInsights.suggestedKeywords.length > 0 ? (
+                  <ul className="list-disc list-inside ml-4 mt-1">
+                    {projectInsights.suggestedKeywords.map((keyword, index) => (
+                      <li key={index}>{keyword}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span className="ml-2 text-muted-foreground">None suggested.</span>
+                )}
+              </div>
+              <p><strong className="font-medium">Fun Fact/Tip:</strong> {projectInsights.funFactOrTip}</p>
             </div>
           </SectionCard>
         )}
