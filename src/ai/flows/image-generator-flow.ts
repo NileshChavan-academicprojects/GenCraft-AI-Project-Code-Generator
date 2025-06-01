@@ -3,9 +3,9 @@
 /**
  * @fileOverview Generates a conceptual UI image based on a project idea and generated code.
  *
- * - generateConceptualUiImage - A function that handles the image generation process.
- * - GenerateConceptualUiImageInput - The input type for the generateConceptualUiImage function.
- * - GenerateConceptualUiImageOutput - The return type for the generateConceptualUiImage function.
+ * - generateImage - A function that handles the image generation process.
+ * - GenerateConceptualUiImageInput - The input type for the generateImage function.
+ * - GenerateConceptualUiImageOutput - The return type for the generateImage function.
  */
 
 import {ai} from '@/ai/genkit';
@@ -20,7 +20,6 @@ export type GenerateConceptualUiImageInput = z.infer<typeof GenerateConceptualUi
 const GenerateConceptualUiImageOutputSchema = z.string().describe('The generated conceptual UI image as a data URI string.');
 export type GenerateConceptualUiImageOutput = z.infer<typeof GenerateConceptualUiImageOutputSchema>;
 
-// Renamed function for clarity, though filename remains image-generator-flow.ts for this change
 export async function generateImage(input: GenerateConceptualUiImageInput): Promise<GenerateConceptualUiImageOutput> {
   return generateConceptualUiImageFlow(input);
 }
@@ -46,7 +45,7 @@ ${codeSnippet}
 
 Based on the project idea and the provided code snippet, generate a single, clean, visually appealing mockup or a conceptual, screenshot-like image of what a simple UI for this application might look like.
 The style should be modern, minimalist, and suitable for a web application.
-If the code suggests specific UI elements (buttons, forms, lists, cards), try to incorporate abstract representations of them.
+Focus on depicting the visual UI elements suggested by the code (e.g., abstract representations of buttons, forms, lists, cards if they appear in the code).
 Do NOT include any actual code text or code syntax highlighting in the image itself. Focus purely on the visual layout and user interface elements.
 Ensure the image is safe for all audiences.`;
 
@@ -63,11 +62,10 @@ Ensure the image is safe for all audiences.`;
         return media.url;
       }
       console.warn('Conceptual UI Image generation succeeded but media URL was not found. Returning placeholder.');
-      return 'https://placehold.co/600x400.png?text=UI+Mockup+Failed';
+      return 'https://placehold.co/600x400.png?text=UI+Mockup+Generation+Issue';
     } catch (error) {
       console.error('Error during conceptual UI image generation flow:', error);
       return 'https://placehold.co/600x400.png?text=UI+Mockup+Error';
     }
   }
 );
-

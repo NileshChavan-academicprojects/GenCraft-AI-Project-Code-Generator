@@ -99,7 +99,7 @@ const generateFlowchartFlow = ai.defineFlow(
       console.warn('Flowchart prompt completed but output was not a valid non-empty SVG string. Output:', result?.output);
       return fallbackSvgWarn;
     } catch (error) {
-      console.error('Error during generateFlowchartPrompt execution (e.g., schema validation failure or AI model error):', error);
+      console.error('Error during generateFlowchartPrompt execution (AI model likely failed to return a string, or safety/schema validation issue):', error);
       return fallbackSvgError;
     }
   }
