@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -8,21 +9,24 @@ import { useToast } from "@/hooks/use-toast";
 import { generateProjectPlan, type GenerateProjectPlanOutput } from "@/ai/flows/project-plan-generator";
 import { generateFlowchart } from "@/ai/flows/flowchart-generator";
 import { generateReactCode, type GenerateReactCodeOutput } from "@/ai/flows/react-code-generator";
+import { generateImage, type GenerateImageOutput } from "@/ai/flows/image-generator-flow"; // New import
 import { LoadingSpinner } from "./loading-spinner";
 import { SectionCard } from "./section-card";
 import { FlowchartDisplay } from "./flowchart-display";
 import { CodeDisplay } from "./code-display";
-import { ListChecks, GitFork, Code2, Wand2 } from "lucide-react";
+import { ListChecks, GitFork, Code2, Wand2, Image as ImageIcon } from "lucide-react"; // Added ImageIcon
 
 export function GenCraftForm() {
   const [projectIdea, setProjectIdea] = useState("");
   const [projectPlan, setProjectPlan] = useState<GenerateProjectPlanOutput | null>(null);
   const [flowchartSvg, setFlowchartSvg] = useState<string | null>(null);
   const [reactCode, setReactCode] = useState<GenerateReactCodeOutput | null>(null);
+  const [generatedImageDataUri, setGeneratedImageDataUri] = useState<GenerateImageOutput | null>(null); // New state
 
   const [isLoadingPlan, setIsLoadingPlan] = useState(false);
   const [isLoadingFlowchart, setIsLoadingFlowchart] = useState(false);
   const [isLoadingCode, setIsLoadingCode] = useState(false);
+  const [isLoadingImage, setIsLoadingImage] = useState(false); // New loading state
 
   const { toast } = useToast();
 
@@ -41,6 +45,7 @@ export function GenCraftForm() {
     setProjectPlan(null);
     setFlowchartSvg(null);
     setReactCode(null);
+    setGeneratedImageDataUri(null); // Reset image
 
     setIsLoadingPlan(true);
     try {
@@ -55,13 +60,15 @@ export function GenCraftForm() {
         toast({ title: "Flowchart Generated!", variant: "default" });
         
         setIsLoadingCode(true);
+        let generatedCode: GenerateReactCodeOutput | null = null;
         try {
           const code = await generateReactCode({
             projectIdea,
-            projectPlan: JSON.stringify(plan), // Pass plan as string
+            projectPlan: JSON.stringify(plan), 
             flowchart,
           });
           setReactCode(code);
+          generatedCode = code; // Store for image generation
           toast({ title: "React Code Generated!", variant: "default" });
         } catch (error) {
           console.error("Error generating React code:", error);
@@ -73,6 +80,26 @@ export function GenCraftForm() {
         } finally {
           setIsLoadingCode(false);
         }
+
+        // Generate image after code generation attempt
+        if (generatedCode) {
+            setIsLoadingImage(true);
+            try {
+              const imageOutput = await generateImage(projectIdea);
+              setGeneratedImageDataUri(imageOutput);
+              toast({ title: "App Image Generated!", variant: "default" });
+            } catch (error) {
+              console.error("Error generating app image:", error);
+              toast({
+                title: "Image Generation Failed",
+                description: "Could not generate an image. Please try again.",
+                variant: "destructive",
+              });
+            } finally {
+              setIsLoadingImage(false);
+            }
+        }
+
       } catch (error) {
         console.error("Error generating flowchart:", error);
         toast({
@@ -95,7 +122,7 @@ export function GenCraftForm() {
     }
   };
 
-  const isGenerating = isLoadingPlan || isLoadingFlowchart || isLoadingCode;
+  const isGenerating = isLoadingPlan || isLoadingFlowchart || isLoadingCode || isLoadingImage;
 
   return (
     <div className="container mx-auto max-w-4xl py-8 px-4">
@@ -177,6 +204,25 @@ export function GenCraftForm() {
         {reactCode && (
           <SectionCard title="Starter React Code" icon={Code2} contentClassName="p-0">
             <CodeDisplay code={reactCode.starterCode} />
+             {isLoadingImage && !generatedImageDataUri && (
+              <div className="mt-6 flex flex-col items-center p-4 border-t border-dashed">
+                <p className="text-sm text-muted-foreground mb-2">Generating App Image...</p>
+                <LoadingSpinner size={36} />
+              </div>
+            )}
+          </SectionCard>
+        )}
+
+        {generatedImageDataUri && (
+          <SectionCard title="Suggested App Image" icon={ImageIcon}>
+            <div className="flex justify-center items-center p-4 bg-muted dark:bg-slate-800 rounded-md">
+              <img 
+                src={generatedImageDataUri} 
+                alt="Generated App Image" 
+                className="max-w-full h-auto max-h-96 rounded-lg shadow-md object-contain"
+                data-ai-hint="application visual"
+              />
+            </div>
           </SectionCard>
         )}
       </div>
