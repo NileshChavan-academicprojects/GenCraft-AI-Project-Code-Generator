@@ -37,6 +37,7 @@ const generateFlowchartPrompt = ai.definePrompt({
   Edges should be lines or paths, preferably with arrowheads indicating direction.
   The SVG must include an appropriate viewBox, for example: '0 0 600 400'.
   Ensure all text is clearly visible against node backgrounds.
+  Do not include any JavaScript, <script> tags, or other interactive elements within the SVG. Focus solely on static visual representation.
   Do not include any explanation, preamble, or any text outside the <svg>...</svg> tags. Only output the SVG string.
 
   Here is an example of a simple, valid SVG flowchart. Adapt its principles for the project idea:
@@ -71,10 +72,10 @@ const generateFlowchartPrompt = ai.definePrompt({
     <line x1="300" y1="210" x2="490" y2="250" class="edge-line" marker-end="url(#arrowhead)" />
   </g>
 </svg>`,
-  config: { // Added safety settings configuration
+  config: {
     safetySettings: [
       { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }, // More permissive for potentially complex code/SVG structure
+      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }, // Adjusted for SVG generation
       { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
       { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
     ],
@@ -88,8 +89,8 @@ const generateFlowchartFlow = ai.defineFlow(
     outputSchema: GenerateFlowchartOutputSchema,
   },
   async input => {
-    const fallbackSvgError = '<svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="hsl(var(--muted))" /><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="hsl(var(--muted-foreground))" font-family="sans-serif" font-size="16px">Flowchart Generation Error</text></svg>';
-    const fallbackSvgWarn = '<svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="hsl(var(--muted))" /><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="hsl(var(--muted-foreground))" font-family="sans-serif" font-size="16px">Flowchart Not Available</text></svg>';
+    const fallbackSvgError = '<svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="hsl(var(--muted))" /><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="hsl(var(--muted-foreground))" font-family="sans-serif" font-size="16px">Flowchart Generation Error (AI failed)</text></svg>';
+    const fallbackSvgWarn = '<svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="hsl(var(--muted))" /><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="hsl(var(--muted-foreground))" font-family="sans-serif" font-size="16px">Flowchart Not Available (Invalid AI output)</text></svg>';
     try {
       const result = await generateFlowchartPrompt(input);
       if (result && typeof result.output === 'string' && result.output.trim() !== '' && result.output.trim().toLowerCase().startsWith('<svg')) {
@@ -98,7 +99,7 @@ const generateFlowchartFlow = ai.defineFlow(
       console.warn('Flowchart prompt completed but output was not a valid non-empty SVG string. Output:', result?.output);
       return fallbackSvgWarn;
     } catch (error) {
-      console.error('Error during generateFlowchartPrompt execution (e.g., schema validation failure):', error);
+      console.error('Error during generateFlowchartPrompt execution (e.g., schema validation failure or AI model error):', error);
       return fallbackSvgError;
     }
   }
