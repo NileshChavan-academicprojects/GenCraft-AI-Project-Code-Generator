@@ -93,7 +93,6 @@ export function GenCraftForm() {
             setIsLoadingImage(true);
             try {
               const imageOutput = await generateImage({ 
-                projectIdea, 
                 generatedCode: representativeCodeForDownstream
               });
               setGeneratedImageDataUri(imageOutput);
